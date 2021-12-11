@@ -70,7 +70,7 @@ tasks.withType(JavaCompile) {
 
 String getNdkBuildPath() {
     Properties properties = new Properties()
-    properties.load(project.rootProject.file('local.properties').newDataInputStream())
+    properties.load(project.rootProject.file('ndk16.properties').newDataInputStream())
     def ndkBuildingDir = properties.getProperty("ndk.r16")
     return ndkBuildingDir + '\\ndk-build.cmd'
 }

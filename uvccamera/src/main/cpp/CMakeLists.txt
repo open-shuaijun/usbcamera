@@ -11,7 +11,8 @@ file(GLOB native-src
         UVCStatusCallback.cpp
         Parameters.cpp
         serenegiant_usb_UVCCamera.cpp
-        avc.cpp)
+        Avc.cpp
+        avc_queue.cpp)
 
 add_library(uvccamera SHARED ${native-src})
 
@@ -24,6 +25,8 @@ target_include_directories(
         ${CMAKE_SOURCE_DIR}/include/libuvc
         ${CMAKE_SOURCE_DIR}/include/librapidjson
         ${CMAKE_SOURCE_DIR}/UVCCamera.h
+        ${CMAKE_SOURCE_DIR}/avc.h
+        ${CMAKE_SOURCE_DIR}/avc_queue.h
 )
 
 
