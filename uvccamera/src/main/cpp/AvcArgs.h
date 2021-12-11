@@ -2,8 +2,8 @@
 // Created by sjh on 2021/12/11.
 //
 
-#ifndef USBCAMERA_AVCARGS_H
-#define USBCAMERA_AVCARGS_H
+#ifndef USBCAMERA_AVCARGS_CPP
+#define USBCAMERA_AVCARGS_CPP
 
 
 struct AvcArgs {
@@ -16,4 +16,4 @@ struct AvcArgs {
 };
 
 
-#endif //USBCAMERA_AVCARGS_H
+#endif //USBCAMERA_AVCARGS_CPP

@@ -15,7 +15,7 @@
 #define I_FRAME_INTERVAL (1)
 
 
-#include <media/NdkMediaCodec.h>
+#include "media/NdkMediaCodec.h"
 #include <pthread.h>
 #include "AvcArgs.h"
 #include "AvcQueue.h"
@@ -35,7 +35,6 @@ private:
     int videoTrack = -1;
     AvcArgs args;
     AvcQueue<void*> frame_queue;
-    static timespec now;
     static int64_t system_nano_time();
 public:
     AvcEncoder(AvcArgs _args);

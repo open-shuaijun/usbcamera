@@ -40,7 +40,6 @@
 #include "utilbase.h"
 #include "UVCPreview.h"
 #include "libuvc_internal.h"
-#include "Avc.h"
 
 #define    LOCAL_DEBUG 0
 #define MAX_FRAME 4

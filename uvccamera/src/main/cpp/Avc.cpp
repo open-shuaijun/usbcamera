@@ -48,7 +48,7 @@ bool AvcEncoder::prepare() {
 
     FILE *file = fopen(args.path_name, "w+");
     if (!file) {
-        LOGE("open media file failed-->%d", fd);
+        LOGE("open media file failed-->%s", args.path_name);
         return false;
     }
     fclose(file);
@@ -67,7 +67,7 @@ bool AvcEncoder::start() {
     startFlag = true;
     if (videoThread) {
         pthread_join(videoThread, nullptr);
-        videoThread = NULL;
+        videoThread = 0;
     }
     pthread_create(&videoThread, nullptr, AvcEncoder::videoStep, this);
     pthread_mutex_unlock(&media_mutex);
@@ -76,6 +76,7 @@ bool AvcEncoder::start() {
 
 bool AvcEncoder::offerData(void *data) {
     frame_queue.push(data);
+    return false;
 }
 
 bool AvcEncoder::stop() {
@@ -95,6 +96,7 @@ bool AvcEncoder::stop() {
     pthread_mutex_unlock(&media_mutex);
     pthread_mutex_destroy(&media_mutex);
     LOGI("finish");
+    return false;
 }
 
 bool AvcEncoder::isRecording() {
@@ -102,6 +104,7 @@ bool AvcEncoder::isRecording() {
 }
 
 int64_t AvcEncoder::system_nano_time() {
+    timespec now{};
     clock_gettime(CLOCK_MONOTONIC, &now);
     return now.tv_sec * 1000000000LL + now.tv_nsec;
 }
@@ -168,5 +171,6 @@ void *AvcEncoder::videoStep(void *obj) {
     } else {
         LOGE("open media file failed");
     }
+    return nullptr;
 }
 

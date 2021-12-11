@@ -11,8 +11,7 @@ file(GLOB native-src
         UVCStatusCallback.cpp
         Parameters.cpp
         serenegiant_usb_UVCCamera.cpp
-        Avc.cpp
-        avc_queue.cpp)
+        Avc.cpp)
 
 add_library(uvccamera SHARED ${native-src})
 
@@ -25,8 +24,9 @@ target_include_directories(
         ${CMAKE_SOURCE_DIR}/include/libuvc
         ${CMAKE_SOURCE_DIR}/include/librapidjson
         ${CMAKE_SOURCE_DIR}/UVCCamera.h
-        ${CMAKE_SOURCE_DIR}/avc.h
-        ${CMAKE_SOURCE_DIR}/avc_queue.h
+        ${CMAKE_SOURCE_DIR}/AvcQueue.h
+        ${CMAKE_SOURCE_DIR}/AvcArgs.h
+        ${CMAKE_SOURCE_DIR}/Avc.h
 )
 
 
@@ -59,8 +59,8 @@ set_target_properties(
 # completing its build.
 
 find_library(log-lib log)
-
 find_library(android-lib android)
+find_library(media-lib mediandk)
 
 # Specifies libraries CMake should link to your target library. You
 # can link multiple libraries, such as libraries you define in this
@@ -72,5 +72,6 @@ target_link_libraries( # Specifies the target library.
         usb100
         uvc
         ${android-lib}
+        ${media-lib}
         ${log-lib})
 

@@ -40,7 +40,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-    val usbMonitor = USBMonitor(this)
+    private val usbMonitor: USBMonitor by lazy {
+        USBMonitor(this)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,7 +56,7 @@ class MainActivity : AppCompatActivity() {
             override fun run() {
                 Log.d(TAG, "UVCCamera Count:${usbMonitor.deviceCount}")
                 usbMonitor.devices.forEach {
-                    Log.e(TAG,"SSSSSSSSSSSSSS")
+                    Log.e(TAG, "SSSSSSSSSSSSSS")
                 }
             }
         }, 3_000)
