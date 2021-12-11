@@ -3,20 +3,23 @@ package com.et.usbcamera
 import android.hardware.usb.UsbDevice
 import android.os.Bundle
 import android.util.Log
+import android.view.LayoutInflater
 import androidx.appcompat.app.AppCompatActivity
 import com.android.uvccamera.USBMonitor
 import com.android.uvccamera.UVCCamera
+import com.et.usbcamera.databinding.ActivityMainBinding
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityMainBinding
     private val onDeviceConnectListener: USBMonitor.OnDeviceConnectListener =
         object : USBMonitor.OnDeviceConnectListener {
             override fun onAttach(device: UsbDevice?) {
-                TODO("Not yet implemented")
+                usbMonitor.requestPermission(device)
             }
 
             override fun onDetach(device: UsbDevice?) {
-                TODO("Not yet implemented")
             }
 
             override fun onConnect(
@@ -24,23 +27,27 @@ class MainActivity : AppCompatActivity() {
                 ctrlBlock: USBMonitor.UsbControlBlock?,
                 createNew: Boolean
             ) {
-                TODO("Not yet implemented")
+                val camera = UVCCamera()
+                camera.open(ctrlBlock)
+                camera.setPreviewDisplay(binding.surface.holder)
+                camera.startPreview()
             }
 
             override fun onDisconnect(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
-                TODO("Not yet implemented")
             }
 
             override fun onCancel(device: UsbDevice?) {
-                TODO("Not yet implemented")
             }
         }
 
+    val usbMonitor = USBMonitor(this)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(LayoutInflater.from(this))
+        setContentView(binding.root)
 
-        val usbMonitor = USBMonitor(this, onDeviceConnectListener)
+        usbMonitor.setOnDeviceConnectListener(onDeviceConnectListener)
         usbMonitor.register()
 
         Timer().schedule(object : TimerTask() {

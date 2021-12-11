@@ -29,6 +29,8 @@
 #include <pthread.h>
 #include <android/native_window.h>
 #include "objectarray.h"
+#include "AvcArgs.h"
+#include "Avc.h"
 
 #pragma interface
 
@@ -58,6 +60,8 @@ private:
 	uvc_device_handle_t *mDeviceHandle;
 	ANativeWindow *mPreviewWindow;
 	volatile bool mIsRunning;
+	volatile bool isRecordAvc;
+	AvcEncoder *avcEncoder;
 	int requestWidth, requestHeight, requestMode;
 	int requestMinFps, requestMaxFps;
 	float requestBandwidth;
@@ -70,7 +74,7 @@ private:
 	ObjectArray<uvc_frame_t *> previewFrames;
 	int previewFormat;
 	size_t previewBytes;
-//
+
 	volatile bool mIsCapturing;
 	ANativeWindow *mCaptureWindow;
 	pthread_t capture_thread;
@@ -82,14 +86,14 @@ private:
 	Fields_iframecallback iframecallback_fields;
 	int mPixelFormat;
 	size_t callbackPixelBytes;
-// improve performance by reducing memory allocation
+
 	pthread_mutex_t pool_mutex;
 	ObjectArray<uvc_frame_t *> mFramePool;
 	uvc_frame_t *get_frame(size_t data_bytes);
 	void recycle_frame(uvc_frame_t *frame);
 	void init_pool(size_t data_bytes);
 	void clear_pool();
-//
+
 	void clearDisplay();
 	static void uvc_preview_frame_callback(uvc_frame_t *frame, void *vptr_args);
 	void addPreviewFrame(uvc_frame_t *frame);
@@ -99,7 +103,7 @@ private:
 	int prepare_preview(uvc_stream_ctrl_t *ctrl);
 	void do_preview(uvc_stream_ctrl_t *ctrl);
 	uvc_frame_t *draw_preview_one(uvc_frame_t *frame, ANativeWindow **window, convFunc_t func, int pixelBytes);
-//
+
 	void addCaptureFrame(uvc_frame_t *frame);
 	uvc_frame_t *waitCaptureFrame();
 	void clearCaptureFrame();
@@ -117,6 +121,8 @@ public:
 	int setPreviewSize(int width, int height, int min_fps, int max_fps, int mode, float bandwidth = 1.0f);
 	int setPreviewDisplay(ANativeWindow *preview_window);
 	int setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pixel_format);
+	int startRecordingAvc(AvcArgs args);
+	int stopRecordingAvc();
 	int startPreview();
 	int stopPreview();
 	inline const bool isCapturing() const;

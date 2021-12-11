@@ -67,7 +67,7 @@ public final class USBMonitor {
 
     private final WeakReference<Context> mWeakContext;
     private final UsbManager mUsbManager;
-    private final OnDeviceConnectListener mOnDeviceConnectListener;
+    private OnDeviceConnectListener mOnDeviceConnectListener;
     private PendingIntent mPermissionIntent = null;
     private final List<DeviceFilter> mDeviceFilters = new ArrayList<>();
 
@@ -120,17 +120,19 @@ public final class USBMonitor {
         public void onCancel(UsbDevice device);
     }
 
-    public USBMonitor(final Context context, final OnDeviceConnectListener listener) {
+    public USBMonitor(final Context context) {
         if (DEBUG) Log.v(TAG, "USBMonitor:Constructor");
-        if (listener == null)
-            throw new IllegalArgumentException("OnDeviceConnectListener should not null.");
         mWeakContext = new WeakReference<>(context);
         mUsbManager = (UsbManager) context.getSystemService(Context.USB_SERVICE);
-        mOnDeviceConnectListener = listener;
         mAsyncHandler = HandlerThreadHandler.createHandler(TAG);
         destroyed = false;
         if (DEBUG) Log.v(TAG, "USBMonitor:mUsbManager=" + mUsbManager);
     }
+
+    public void setOnDeviceConnectListener(final OnDeviceConnectListener _listener) {
+        this.mOnDeviceConnectListener = _listener;
+    }
+
 
     /**
      * Release all related resources,
