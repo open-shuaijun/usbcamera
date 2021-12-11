@@ -10,7 +10,8 @@ file(GLOB native-src
         UVCButtonCallback.cpp
         UVCStatusCallback.cpp
         Parameters.cpp
-        serenegiant_usb_UVCCamera.cpp)
+        serenegiant_usb_UVCCamera.cpp
+        avc.cpp)
 
 add_library(uvccamera SHARED ${native-src})
 
