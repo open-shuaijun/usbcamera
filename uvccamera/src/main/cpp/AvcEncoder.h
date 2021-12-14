@@ -5,6 +5,7 @@
 #ifndef USBCAMERA_AVCENCODER_H
 #define USBCAMERA_AVCENCODER_H
 
+
 #define SAMPLE_RATE (48000)//音频采样率
 #define AUDIO_BIT_RATE (128000)//音频编码的比特率
 #define CHANNEL_COUNT (2)//音频编码通道数
@@ -12,61 +13,71 @@
 #define AAC_PROFILE (2)
 #define AUDIO_FORMAT (2)//音频录制格式，默认为PCM16Bit
 #define AUDIO_SOURCE (1)
+
+
 #define I_FRAME_INTERVAL (1)
 
-
-#include "media/NdkMediaCodec.h"
+#include <media/NdkMediaMuxer.h>
+#include <media/NdkMediaCodec.h>
+#include <media/NdkMediaFormat.h>
 #include <pthread.h>
+#include <jni.h>
 #include "AvcArgs.h"
-#include "AvcQueue.h"
+#include "AvcQueue.h."
 
 
 class AvcEncoder {
 private:
-    const char *VIDEO_MIME = "video/avc";
-    AMediaCodec *videoCodec = nullptr;
-    pthread_mutex_t media_mutex{};
-    pthread_t videoThread{};
-    int64_t fpsTime = 50;
-    uint sleepTime = 20 * 1000;
-    int64_t nanoTime{};
-    bool recording = false;
-    bool startFlag = false;
-    int videoTrack = -1;
-    AvcQueue<void *> frame_queue;
-
-    static int64_t system_nano_time();
-
-    AvcEncoder(){
+    AvcEncoder() {
         pthread_mutex_init(&media_mutex, nullptr);
     }
 
+    AMediaMuxer *mMuxer;  //多路复用器，用于音视频混合
+    AMediaCodec *videoCodec;   //编码器，用于视频编码
+    AvcQueue<void *> frame_queue;
+
+    const char *VIDEO_MIME = "video/avc";
+
+    int mVideoTrack = -1;
+
+    pthread_t mVideoThread;
+    pthread_mutex_t media_mutex;
+
+    int64_t fpsTime;
+    uint sleepTime = 20 * 1000;
+
+    bool mIsRecording = false, mStartFlag = false;
+
+    int64_t nanoTime;
+
 public:
-    const char *TAG = "AvcEncoder";
 
-    bool prepare(AvcArgs _args);
-
-    bool start();
-
-    bool offerData(void *data);
-
-    bool stop();
-
-    static void *videoStep(void *obj);
-
-    const char *path_name;
-
-    ~AvcEncoder(){
+    ~AvcEncoder() {
     }
 
-    AvcEncoder(const AvcEncoder&)=delete;
+    AvcEncoder(const AvcEncoder &) = delete;
 
-    AvcEncoder& operator=(const AvcEncoder&)=delete;
-    static AvcEncoder& getInstance(){
+    AvcEncoder &operator=(const AvcEncoder &) = delete;
+
+    static AvcEncoder &getInstance() {
         static AvcEncoder instance;
         return instance;
     }
+
+    bool prepare(AvcArgs arguments);
+
+    bool start();
+
+    bool isRecording();
+
+    void stop();
+
+    void feedData(void *data);
+
+    static void *videoStep(void *obj);
+
 };
+
 
 #endif //USBCAMERA_AVCENCODER_H
 

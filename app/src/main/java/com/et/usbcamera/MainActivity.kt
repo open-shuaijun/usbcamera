@@ -6,10 +6,12 @@ import android.os.Environment
 import android.util.Log
 import android.view.LayoutInflater
 import androidx.appcompat.app.AppCompatActivity
+import com.android.uvccamera.IFrameCallback
 import com.android.uvccamera.USBMonitor
 import com.android.uvccamera.UVCCamera
 import com.et.usbcamera.databinding.ActivityMainBinding
 import java.io.File
+import java.nio.ByteBuffer
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
@@ -48,19 +50,21 @@ class MainActivity : AppCompatActivity() {
                 val camera = UVCCamera()
                 camera.open(ctrlBlock)
                 camera.setPreviewDisplay(binding.surface.holder)
+                camera.setPreviewSize(640, 480, UVCCamera.FRAME_FORMAT_YUYV)
+//
                 camera.startPreview()
 
                 getExternalFilesDir(Environment.DIRECTORY_MOVIES)?.let { mov ->
-                    val f = File(mov, "test.avc")
+                    val f = File(mov, "test-${System.currentTimeMillis()}.mp4")
                     camera.startRecordingAvc(f.absolutePath)
                 }
-                Timer().schedule(object:TimerTask(){
+                Timer().schedule(object : TimerTask() {
                     override fun run() {
                         camera.stopRecordingAvc()
                         camera.stopPreview()
                         camera.destroy()
                     }
-                },3_000)
+                }, 30_000)
             }
 
             override fun onDisconnect(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
@@ -82,6 +86,14 @@ class MainActivity : AppCompatActivity() {
         usbMonitor.setOnDeviceConnectListener(onDeviceConnectListener)
         usbMonitor.register()
     }
+
+    override fun onResume() {
+        super.onResume()
+        A().apply {
+            getMediaCodecList()
+        }
+    }
+
 
     companion object {
         const val TAG = "MainActivity"

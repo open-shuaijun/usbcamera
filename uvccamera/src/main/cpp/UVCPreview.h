@@ -134,6 +134,9 @@ private:
 
     void callbackPixelFormatChanged();
 
+    unsigned char *yuv420_buf = (unsigned char *)malloc(3*640*480/2*sizeof(unsigned char));
+
+    int yuyv_to_yuv420p(const unsigned char *in, unsigned char *out, unsigned int width, unsigned int height);
 public:
     UVCPreview(uvc_device_handle_t *devh);
 

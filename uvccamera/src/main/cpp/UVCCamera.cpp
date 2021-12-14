@@ -281,19 +281,22 @@ int UVCCamera::setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pix
     RETURN(result, int);
 }
 
-int UVCCamera::startRecordingAvc(JNIEnv *env, jstring path_name) {
+int UVCCamera::startRecordingAvc(const char* path_name) {
     ENTER();
     int result = EXIT_FAILURE;
     if (mPreview) {
         LOGV("录制文件路径:" + path_name)
         AvcArgs args{};
         args.bit_rate = 1000000;
-        args.color_format = 0x7F420888;
-        args.frame_rate = 20;
+
+//        args.color_format = 2135033992;
+        args.color_format = 19;
+//        args.color_format = 21;
+//        args.color_format = 2130708361;
+//        args.frame_rate = 20;
         args.height = 480;
         args.width = 640;
-        args.path_name = "/mnt/internal_sd/Android/data/com.et.usbcamera/files/Movies/test.avc\0";
-
+        args.path_name = path_name;
         AvcEncoder::getInstance().prepare(args);
         AvcEncoder::getInstance().start();
 

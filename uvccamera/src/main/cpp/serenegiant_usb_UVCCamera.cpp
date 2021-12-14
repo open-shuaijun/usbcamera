@@ -174,12 +174,19 @@ static jint nativeRelease(JNIEnv *env, jobject thiz,
 // 开始录制
 static jint nativeStartRecordingAvc(JNIEnv *env, jobject thiz,
                                     ID_TYPE id_camera, jstring path_name) {
-
     ENTER();
     int result = JNI_ERR;
     auto *camera = reinterpret_cast<UVCCamera *>(id_camera);
     if (LIKELY(camera)) {
-        result = camera->startRecordingAvc(env, path_name);
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "AAAAAAAAAAA");
+        if (path_name) {
+            const char *pathName = env->GetStringUTFChars(path_name, JNI_FALSE);
+            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "%s", pathName);
+            camera->startRecordingAvc(pathName);
+            env->ReleaseStringUTFChars(path_name, pathName);
+        } else{
+            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "DDDDDDDDDDDDD");
+        }
     }
     RETURN(result, jint);
 }
@@ -187,15 +194,11 @@ static jint nativeStartRecordingAvc(JNIEnv *env, jobject thiz,
 
 // 停止录制
 static jint nativeStopRecordingAvc(JNIEnv *env, jobject thiz, ID_TYPE id_camera) {
-
     ENTER();
     int result = JNI_ERR;
     auto *camera = reinterpret_cast<UVCCamera *>(id_camera);
-	__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "gggggggggg:");
 
 //	if (LIKELY(camera)) {
-		__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "hhhhhhhh:");
-
 		result = camera->stopRecordingAvc();
 //    } else {
 //        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "bad unlikely camera:");
@@ -2054,8 +2057,8 @@ static JNINativeMethod methods[] = {
         {"nativeConnect",                           "(JIIIIILjava/lang/String;)I",                 (void *) nativeConnect},
         {"nativeRelease",                           "(J)I",                                        (void *) nativeRelease},
 
-        {"nativeStartRecordingAvc",                 "(Ljava/lang/String;)I",                       (void *) nativeStartRecordingAvc},
-        {"nativeStopRecordingAvc",                  "()I",                                         (void *) nativeStopRecordingAvc},
+        {"nativeStartRecordingAvc",                 "(JLjava/lang/String;)I",                       (void *) nativeStartRecordingAvc},
+        {"nativeStopRecordingAvc",                  "(J)I",                                         (void *) nativeStopRecordingAvc},
 
         {"nativeSetStatusCallback",                 "(JLcom/android/uvccamera/IStatusCallback;)I", (void *) nativeSetStatusCallback},
         {"nativeSetButtonCallback",                 "(JLcom/android/uvccamera/IButtonCallback;)I", (void *) nativeSetButtonCallback},
