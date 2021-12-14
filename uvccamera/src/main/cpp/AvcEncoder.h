@@ -25,7 +25,6 @@
 #include "AvcArgs.h"
 #include "AvcQueue.h."
 
-
 class AvcEncoder {
 private:
     AvcEncoder() {
@@ -50,9 +49,13 @@ private:
 
     int64_t nanoTime;
 
+    static unsigned char *yuv420_buf;
+
 public:
 
+
     ~AvcEncoder() {
+
     }
 
     AvcEncoder(const AvcEncoder &) = delete;
@@ -73,6 +76,9 @@ public:
     void stop();
 
     void feedData(void *data);
+
+    static int yuyv_to_yuv420p(const unsigned char *in, unsigned char *out, unsigned int width,
+                               unsigned int height);
 
     static void *videoStep(void *obj);
 

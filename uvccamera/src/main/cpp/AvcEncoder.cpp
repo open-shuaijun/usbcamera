@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include "AvcEncoder.h"
 
+unsigned char* AvcEncoder::yuv420_buf = nullptr;
+
 
 int64_t systemnanotime() {
     timespec now;
@@ -15,6 +17,7 @@ int64_t systemnanotime() {
 
 bool AvcEncoder::prepare(AvcArgs arguments) {
     fpsTime = 1000 / arguments.frame_rate;
+    yuv420_buf = new unsigned char [3 * 640 * 480 / 2 * sizeof(unsigned char)];
     AMediaFormat *videoFormat = AMediaFormat_new();
     AMediaFormat_setString(videoFormat, AMEDIAFORMAT_KEY_MIME, VIDEO_MIME);
     AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_WIDTH, 640);
@@ -75,6 +78,8 @@ bool AvcEncoder::isRecording() {
 }
 
 void AvcEncoder::stop() {
+    delete(AvcEncoder::yuv420_buf);
+    AvcEncoder::yuv420_buf = nullptr;
     pthread_mutex_lock(&media_mutex);
     mIsRecording = false;
     mStartFlag = false;
@@ -100,6 +105,54 @@ void AvcEncoder::stop() {
     pthread_mutex_destroy(&media_mutex);
 }
 
+
+int AvcEncoder::yuyv_to_yuv420p(const unsigned char *in, unsigned char *out, unsigned int width,
+                                unsigned int height) {
+    unsigned char *y = out;
+    unsigned char *u = out + width * height;
+    unsigned char *v = out + width * height + width * height / 4;
+
+    unsigned int i, j;
+    unsigned int base_h;
+    unsigned int is_y = 1, is_u = 1;
+    unsigned int y_index = 0, u_index = 0, v_index = 0;
+
+    unsigned long yuv422_length = 2 * width * height;
+
+    //序列为YU YV YU YV，一个yuv422帧的长度 width * height * 2 个字节
+    //丢弃偶数行 u v
+    for (i = 0; i < yuv422_length; i += 2) {
+
+        *(y + y_index) = *(in + i);
+
+        y_index++;
+
+    }
+
+    for (i = 0; i < height; i += 2) {
+
+        base_h = i * width * 2;
+
+        for (j = base_h + 1; j < base_h + width * 2; j += 2) {
+
+            if (is_u) {
+
+                *(u + u_index) = *(in + j);
+
+                u_index++;
+
+                is_u = 0;
+
+            } else {
+                *(v + v_index) = *(in + j);
+                v_index++;
+                is_u = 1;
+            }
+        }
+    }
+    return 1;
+}
+
 void *AvcEncoder::videoStep(void *obj) {
     AvcEncoder *record = (AvcEncoder *) obj;
     while (record->mStartFlag) {
@@ -109,8 +162,10 @@ void *AvcEncoder::videoStep(void *obj) {
         if (index >= 0) {
             uint8_t *buffer = AMediaCodec_getInputBuffer(record->videoCodec, index, &out_size);
             void *data = *record->frame_queue.wait_and_pop().get();
-            if (data != NULL && out_size > 0) {
-                memcpy(buffer, data, out_size);
+            yuyv_to_yuv420p((const unsigned char *) data, AvcEncoder::yuv420_buf, 640, 480);
+
+            if (yuv420_buf != NULL && out_size > 0) {
+                memcpy(buffer, yuv420_buf, out_size);
                 AMediaCodec_queueInputBuffer(record->videoCodec, index, 0, out_size,
                                              (systemnanotime() - record->nanoTime) / 1000,
                                              record->mIsRecording ? 0
