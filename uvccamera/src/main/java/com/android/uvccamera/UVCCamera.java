@@ -32,6 +32,7 @@ import org.json.JSONObject;
 
 import android.graphics.SurfaceTexture;
 import android.hardware.usb.UsbDevice;
+import android.media.MediaCodecInfo;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Surface;
@@ -112,13 +113,13 @@ public class UVCCamera {
 	public static final int STATUS_ATTRIBUTE_FAILURE_CHANGE = 0x02;
 	public static final int STATUS_ATTRIBUTE_UNKNOWN = 0xff;
 
-	private static boolean isLoaded;
+	private static volatile boolean isLoaded;
 	static {
 		if (!isLoaded) {
 			System.loadLibrary("jpeg-turbo1500");
 			System.loadLibrary("usb100");
 			System.loadLibrary("uvc");
-			System.loadLibrary("UVCCamera");
+			System.loadLibrary("uvccamera");
 			isLoaded = true;
 		}
 	}
@@ -216,6 +217,27 @@ public class UVCCamera {
 	public void setStatusCallback(final IStatusCallback callback) {
 		if (mNativePtr != 0) {
 			nativeSetStatusCallback(mNativePtr, callback);
+		}
+	}
+
+	/**
+	 * 启动录制h264
+	 * @param pathName path_name video
+	 */
+	public void startRecordingAvc(final String pathName) {
+		Log.d(TAG,"开始存储:"+pathName);
+		if (mNativePtr != 0) {
+			nativeStartRecordingAvc(pathName);
+		}
+	}
+
+	/**
+	 *停止录制h264
+	 */
+	public void stopRecordingAvc() {
+		if (mNativePtr != 0) {
+			Log.d(TAG,"调用结束录制");
+			nativeStopRecordingAvc();
 		}
 	}
 
@@ -1011,7 +1033,7 @@ public class UVCCamera {
     }
 
 	private String getUSBFSName(final USBMonitor.UsbControlBlock ctrlBlock) {
-		String result = null;
+    	String result = null;
 		final String name = ctrlBlock.getDeviceName();
 		final String[] v = !TextUtils.isEmpty(name) ? name.split("/") : null;
 		if ((v != null) && (v.length > 2)) {
@@ -1031,8 +1053,11 @@ public class UVCCamera {
     private native long nativeCreate();
     private native void nativeDestroy(final long id_camera);
     private native int nativeConnect(long id_camera, int venderId, int productId, int fileDescriptor, int busNum, int devAddr, String usbfs);
-
     private static native int nativeRelease(final long id_camera);
+
+	private native int nativeStartRecordingAvc(final String pathName);
+	private native int nativeStopRecordingAvc();
+
 	private static native int nativeSetStatusCallback(final long mNativePtr, final IStatusCallback callback);
 	private static native int nativeSetButtonCallback(final long mNativePtr, final IButtonCallback callback);
 

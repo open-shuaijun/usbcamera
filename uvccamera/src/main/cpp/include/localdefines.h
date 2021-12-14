@@ -50,8 +50,8 @@
 #define THREAD_PRIORITY_URGENT_AUDIO	-19
 
 #define USE_LOGALL	// If you don't need to all LOG, comment out this line and select follows
-//#define USE_LOGV
-//#define USE_LOGD
+#define USE_LOGV
+#define USE_LOGD
 #define USE_LOGI
 #define USE_LOGW
 #define USE_LOGE

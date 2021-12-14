@@ -64,13 +64,14 @@ UVCPreview::UVCPreview(uvc_device_handle_t *devh)
           previewFormat(WINDOW_FORMAT_RGBA_8888),
           mIsRunning(false),
           mIsCapturing(false),
-          isRecordAvc(false),
           captureQueu(nullptr),
           mFrameCallbackObj(nullptr),
           mFrameCallbackFunc(nullptr),
           callbackPixelBytes(2) {
 
     ENTER();
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "Native构建相机预览");
+
     pthread_cond_init(&preview_sync, nullptr);
     pthread_mutex_init(&preview_mutex, nullptr);
 
@@ -84,10 +85,6 @@ UVCPreview::UVCPreview(uvc_device_handle_t *devh)
 UVCPreview::~UVCPreview() {
 
     ENTER();
-    if (avcEncoder) {
-        delete(avcEncoder);
-        avcEncoder = nullptr;
-    }
     if (mPreviewWindow)
         ANativeWindow_release(mPreviewWindow);
     mPreviewWindow = nullptr;
@@ -102,6 +99,8 @@ UVCPreview::~UVCPreview() {
     pthread_mutex_destroy(&capture_mutex);
     pthread_cond_destroy(&capture_sync);
     pthread_mutex_destroy(&pool_mutex);
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "Native析构相机预览:");
+
     EXIT();
 }
 
@@ -120,7 +119,8 @@ uvc_frame_t *UVCPreview::get_frame(size_t data_bytes) {
         }
     }
     pthread_mutex_unlock(&pool_mutex);
-    if UNLIKELY(!frame) {
+    if UNLIKELY(!frame)
+    {
         LOGW("allocate new frame");
         frame = uvc_allocate_frame(data_bytes);
     }
@@ -170,7 +170,7 @@ void UVCPreview::clear_pool() {
     EXIT();
 }
 
-inline const bool UVCPreview::isRunning() const { return mIsRunning; }
+inline bool UVCPreview::isRunning() const { return mIsRunning; }
 
 int UVCPreview::setPreviewSize(int width, int height, int min_fps, int max_fps, int mode,
                                float bandwidth) {
@@ -259,28 +259,6 @@ int UVCPreview::setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pi
     RETURN(0, int);
 }
 
-int UVCPreview::startRecordingAvc(AvcArgs args) {
-    ENTER();
-    if (!avcEncoder) {
-        avcEncoder = new AvcEncoder(args);;
-        avcEncoder->prepare();
-        avcEncoder->start();
-    }
-    isRecordAvc = true;
-    RETURN(0, int);
-}
-
-int UVCPreview::stopRecordingAvc() {
-    ENTER();
-    isRecordAvc = false;
-    if (avcEncoder) {
-        delete(avcEncoder);
-        avcEncoder->stop();
-        avcEncoder = nullptr;
-    }
-    RETURN(0, int);
-}
-
 void UVCPreview::callbackPixelFormatChanged() {
     mFrameCallbackFunc = nullptr;
     const size_t sz = requestWidth * requestHeight;
@@ -365,7 +343,8 @@ int UVCPreview::startPreview() {
         pthread_mutex_lock(&preview_mutex);
         {
             if (LIKELY(mPreviewWindow)) {
-                result = pthread_create(&preview_thread, nullptr, preview_thread_func, (void *) this);
+                result = pthread_create(&preview_thread, nullptr, preview_thread_func,
+                                        (void *) this);
             }
         }
         pthread_mutex_unlock(&preview_mutex);
@@ -421,7 +400,7 @@ void UVCPreview::uvc_preview_frame_callback(uvc_frame_t *frame, void *vptr_args)
     auto *preview = reinterpret_cast<UVCPreview *>(vptr_args);
     if UNLIKELY(!preview->isRunning() || !frame || !frame->frame_format || !frame->data ||
                 !frame->data_bytes)
-        return;
+    return;
     if (UNLIKELY(
             ((frame->frame_format != UVC_FRAME_FORMAT_MJPEG) &&
              (frame->actual_bytes < preview->frameBytes))
@@ -494,7 +473,7 @@ void *UVCPreview::preview_thread_func(void *vptr_args) {
     int result;
 
     ENTER();
-    UVCPreview *preview = reinterpret_cast<UVCPreview *>(vptr_args);
+    auto *preview = reinterpret_cast<UVCPreview *>(vptr_args);
     if (LIKELY(preview)) {
         uvc_stream_ctrl_t ctrl;
         result = preview->prepare_preview(&ctrl);
@@ -503,7 +482,7 @@ void *UVCPreview::preview_thread_func(void *vptr_args) {
         }
     }
     PRE_EXIT();
-    pthread_exit(NULL);
+    pthread_exit(nullptr);
 }
 
 int UVCPreview::prepare_preview(uvc_stream_ctrl_t *ctrl) {
@@ -549,14 +528,14 @@ int UVCPreview::prepare_preview(uvc_stream_ctrl_t *ctrl) {
 void UVCPreview::do_preview(uvc_stream_ctrl_t *ctrl) {
     ENTER();
 
-    uvc_frame_t *frame = NULL;
-    uvc_frame_t *frame_mjpeg = NULL;
+    uvc_frame_t *frame = nullptr;
+    uvc_frame_t *frame_mjpeg = nullptr;
     uvc_error_t result = uvc_start_streaming_bandwidth(
             mDeviceHandle, ctrl, uvc_preview_frame_callback, (void *) this, requestBandwidth, 0);
 
     if (LIKELY(!result)) {
         clearPreviewFrame();
-        pthread_create(&capture_thread, NULL, capture_thread_func, (void *) this);
+        pthread_create(&capture_thread, nullptr, capture_thread_func, (void *) this);
 
 #if LOCAL_DEBUG
         LOGI("Streaming...");
@@ -646,7 +625,7 @@ int copyToSurface(uvc_frame_t *frame, ANativeWindow **window) {
     int result = 0;
     if (LIKELY(*window)) {
         ANativeWindow_Buffer buffer;
-        if (LIKELY(ANativeWindow_lock(*window, &buffer, NULL) == 0)) {
+        if (LIKELY(ANativeWindow_lock(*window, &buffer, nullptr) == 0)) {
             // source = frame data
             const uint8_t *src = (uint8_t *) frame->data;
             const int src_w = frame->width * PREVIEW_PIXEL_BYTES;
@@ -687,7 +666,8 @@ UVCPreview::draw_preview_one(uvc_frame_t *frame, ANativeWindow **window, convFun
         uvc_frame_t *converted;
         if (convert_func) {
             converted = get_frame(frame->width * frame->height * pixcelBytes);
-            if LIKELY(converted) {
+            if LIKELY(converted)
+            {
                 b = convert_func(frame, converted);
                 if (!b) {
                     pthread_mutex_lock(&preview_mutex);
@@ -710,7 +690,7 @@ UVCPreview::draw_preview_one(uvc_frame_t *frame, ANativeWindow **window, convFun
 //======================================================================
 //
 //======================================================================
-inline const bool UVCPreview::isCapturing() const { return mIsCapturing; }
+inline bool UVCPreview::isCapturing() const { return mIsCapturing; }
 
 int UVCPreview::setCaptureDisplay(ANativeWindow *capture_window) {
     ENTER();
@@ -824,7 +804,6 @@ void *UVCPreview::capture_thread_func(void *vptr_args) {
 void UVCPreview::do_capture(JNIEnv *env) {
 
     ENTER();
-
     clearCaptureFrame();
     callbackPixelFormatChanged();
     for (; isRunning();) {
@@ -863,7 +842,8 @@ void UVCPreview::do_capture_surface(JNIEnv *env) {
         frame = waitCaptureFrame();
         if (LIKELY(frame)) {
             // frame data is always YUYV format.
-            if LIKELY(isCapturing()) {
+            if LIKELY(isCapturing())
+            {
                 if (UNLIKELY(!converted)) {
                     converted = get_frame(previewBytes);
                 }
@@ -895,12 +875,12 @@ void UVCPreview::do_capture_surface(JNIEnv *env) {
  */
 void UVCPreview::do_capture_callback(JNIEnv *env, uvc_frame_t *frame) {
     ENTER();
-
     if (LIKELY(frame)) {
         uvc_frame_t *callback_frame = frame;
-        if (isRecordAvc && avcEncoder) {
-            avcEncoder->offerData(frame->data);
-        }
+
+        AvcEncoder::getInstance().offerData(callback_frame->data);
+
+
         if (mFrameCallbackObj) {
             if (mFrameCallbackFunc) {
                 callback_frame = get_frame(callbackPixelBytes);

@@ -14,3 +14,5 @@
 .cxx
 local.properties
 /.idea
+/uvccamera/src/main/libs/
+/uvccamera/src/main/obj/

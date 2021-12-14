@@ -267,7 +267,7 @@ static JNINativeMethod methods[] = {
 	{ "nativeStart",					"(J)I", (void *) nativeStart },
 	{ "nativeStop",						"(J)I", (void *) nativeStop },
 
-	{ "nativeSetFrameCallback",			"(JLcom/serenegiant/usb/IFrameCallback;I)I", (void *) nativeSetFrameCallback },
+	{ "nativeSetFrameCallback",			"(JLcom/android/uvccamera/IFrameCallback;I)I", (void *) nativeSetFrameCallback },
 };
 
 int register_callback_pipeline(JNIEnv *env) {
