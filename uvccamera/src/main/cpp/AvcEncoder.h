@@ -27,32 +27,27 @@
 
 class AvcEncoder {
 private:
-    AvcEncoder() {
-        pthread_mutex_init(&media_mutex, nullptr);
-    }
-
-    AMediaMuxer *mMuxer;  //多路复用器，用于音视频混合
-    AMediaCodec *videoCodec;   //编码器，用于视频编码
-    AvcQueue<void *> frame_queue;
 
     const char *VIDEO_MIME = "video/avc";
 
-    int mVideoTrack = -1;
-
-    pthread_t mVideoThread;
+    pthread_t videoThread;
     pthread_mutex_t media_mutex;
+    AMediaMuxer *muxer;
+    AMediaCodec *videoCodec;
+    unsigned char *yuv420_buf;
 
+    AvcQueue<void *> frame_queue;
+    int mVideoTrack = -1;
     int64_t fpsTime;
     uint sleepTime = 20 * 1000;
-
-    bool mIsRecording = false, mStartFlag = false;
-
+    bool mIsRecording = false;
+    bool startFlag = false;
     int64_t nanoTime;
 
-    static unsigned char *yuv420_buf;
+    AvcEncoder() {
+    }
 
 public:
-
 
     ~AvcEncoder() {
 
@@ -71,7 +66,7 @@ public:
 
     bool start();
 
-    bool isRecording();
+    bool isRecording() const;
 
     void stop();
 
@@ -79,6 +74,8 @@ public:
 
     static int yuyv_to_yuv420p(const unsigned char *in, unsigned char *out, unsigned int width,
                                unsigned int height);
+
+    void releaseMediaCodec();
 
     static void *videoStep(void *obj);
 

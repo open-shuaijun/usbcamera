@@ -178,7 +178,6 @@ static jint nativeStartRecordingAvc(JNIEnv *env, jobject thiz,
     int result = JNI_ERR;
     auto *camera = reinterpret_cast<UVCCamera *>(id_camera);
     if (LIKELY(camera)) {
-        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "AAAAAAAAAAA");
         if (path_name) {
             const char *pathName = env->GetStringUTFChars(path_name, JNI_FALSE);
             __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "%s", pathName);
@@ -198,11 +197,11 @@ static jint nativeStopRecordingAvc(JNIEnv *env, jobject thiz, ID_TYPE id_camera)
     int result = JNI_ERR;
     auto *camera = reinterpret_cast<UVCCamera *>(id_camera);
 
-//	if (LIKELY(camera)) {
+	if (LIKELY(camera)) {
 		result = camera->stopRecordingAvc();
-//    } else {
-//        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "bad unlikely camera:");
-//    }
+    } else {
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "bad unlikely camera:");
+    }
     RETURN(result, jint);
 }
 
@@ -280,7 +279,7 @@ static jint nativeStopPreview(JNIEnv *env, jobject thiz,
 
     jint result = JNI_ERR;
     ENTER();
-    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+    auto *camera = reinterpret_cast<UVCCamera *>(id_camera);
     if (LIKELY(camera)) {
         result = camera->stopPreview();
     }

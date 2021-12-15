@@ -288,12 +288,7 @@ int UVCCamera::startRecordingAvc(const char* path_name) {
         LOGV("录制文件路径:" + path_name)
         AvcArgs args{};
         args.bit_rate = 1000000;
-
-//        args.color_format = 2135033992;
         args.color_format = 19;
-//        args.color_format = 21;
-//        args.color_format = 2130708361;
-//        args.frame_rate = 20;
         args.height = 480;
         args.width = 640;
         args.path_name = path_name;
@@ -315,7 +310,6 @@ int UVCCamera::stopRecordingAvc() {
 
 int UVCCamera::startPreview() {
     ENTER();
-
     int result = EXIT_FAILURE;
     if (mDeviceHandle) {
         return mPreview->startPreview();

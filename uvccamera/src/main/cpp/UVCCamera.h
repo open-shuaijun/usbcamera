@@ -192,7 +192,7 @@ public:
 	int setPreviewDisplay(ANativeWindow *preview_window);
 	int setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pixel_format);
 	int startRecordingAvc(const char* path_name);
-	int stopRecordingAvc();
+	static int stopRecordingAvc();
 	int startPreview();
 	int stopPreview();
 	int setCaptureDisplay(ANativeWindow *capture_window);

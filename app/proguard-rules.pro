@@ -23,3 +23,6 @@
 -keepclassmembernames class com.android.uvccamera.UVCCamera {
     native <methods>;
 }
+
+-dontwarn com.tencent.bugly.**
+-keep public class com.tencent.bugly.**{*;}
