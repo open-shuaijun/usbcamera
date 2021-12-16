@@ -287,15 +287,13 @@ int UVCCamera::startRecordingAvc(const char* path_name) {
     if (mPreview) {
         LOGV("录制文件路径:" + path_name)
         AvcArgs args{};
-        args.bit_rate = 1000000;
+        args.bit_rate = 1024;
         args.color_format = 19;
         args.height = 480;
         args.width = 640;
         args.frame_rate = 30;
         args.path_name = path_name;
-        AvcEncoder::getInstance().prepare(args);
-        AvcEncoder::getInstance().start();
-
+        AvcEncoder::getInstance().prepare_start(args);
     } else {
         __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "Native预览未就绪");
     }

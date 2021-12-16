@@ -6,6 +6,32 @@
 #include <cstdlib>
 #include <utilbase.h>
 #include "AvcEncoder.h"
+#include "sys/select.h"
+
+const int ERROR = -1;
+const int READY = 0;
+const int STOP = 1;
+const int RECORD = 2;
+const int MUXER_START = 3;
+
+int AvcEncoder::status = READY;
+
+int frame_rate = 25;
+
+AvcEncoder::AvcEncoder() {
+//    pthread_mutex_init(&media_mutex, nullptr);
+    fpsTime = 1000 / frame_rate;
+
+    yuv420_buf = new unsigned char[3 * 640 * 480 / 2 * sizeof(unsigned char)];
+
+}
+
+AvcEncoder::~AvcEncoder() {
+//    pthread_mutex_destroy(&media_mutex);
+    delete (yuv420_buf);
+    yuv420_buf = nullptr;
+
+}
 
 int64_t system_nano_time() {
     timespec now{};
@@ -13,105 +39,82 @@ int64_t system_nano_time() {
     return now.tv_sec * 1000000000LL + now.tv_nsec;
 }
 
-bool AvcEncoder::prepare(AvcArgs arguments) {
-    pthread_mutex_init(&media_mutex, nullptr);
-    fpsTime = 1000 / arguments.frame_rate;
-    yuv420_buf = new unsigned char[3 * 640 * 480 / 2 * sizeof(unsigned char)];
+static void sleep_ms(unsigned int secs) {
+    struct timeval tval{};
+    tval.tv_sec = secs / 1000;
+    tval.tv_usec = (secs * 1000) % 1000000;
+    select(0, nullptr, nullptr, nullptr, &tval);
+}
+
+bool AvcEncoder::prepare_start(AvcArgs arguments) {
+//    pthread_mutex_lock(&media_mutex);
+    if (AvcEncoder::status != READY) {
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "编码器未释放，请稍后重试");
+        return false;
+    }
     AMediaFormat *videoFormat = AMediaFormat_new();
     AMediaFormat_setString(videoFormat, AMEDIAFORMAT_KEY_MIME, VIDEO_MIME);
     AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_WIDTH, 640);
     AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_HEIGHT, 480);
-    AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_BIT_RATE, arguments.bit_rate);
-    AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_FRAME_RATE, arguments.frame_rate);
-    AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_I_FRAME_INTERVAL, I_FRAME_INTERVAL);
-    AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_COLOR_FORMAT, arguments.color_format);
+    AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_BIT_RATE, 1024);
+    AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_FRAME_RATE, frame_rate);
+    AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_I_FRAME_INTERVAL, 1);
+    AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_COLOR_FORMAT, 19);
     uint8_t sps[2] = {0x12, 0x12};
     uint8_t pps[2] = {0x12, 0x12};
     AMediaFormat_setBuffer(videoFormat, "csd-0", sps, 2); // sps
     AMediaFormat_setBuffer(videoFormat, "csd-1", pps, 2); // pps
     videoCodec = AMediaCodec_createEncoderByType(VIDEO_MIME);
-    media_status_t videoConfigureStatus = AMediaCodec_configure(videoCodec, videoFormat, nullptr, nullptr,
+
+
+    media_status_t videoConfigureStatus = AMediaCodec_configure(videoCodec, videoFormat, nullptr,
+                                                                nullptr,
                                                                 AMEDIACODEC_CONFIGURE_FLAG_ENCODE);
     if (AMEDIA_OK != videoConfigureStatus) {
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "Media Config Failed!");
+//        pthread_mutex_unlock(&media_mutex);
+        status = ERROR;
         return false;
     }
     AMediaFormat_delete(videoFormat);
 
+
     int fd = open(arguments.path_name, O_CREAT | O_RDWR, 0666);
     if (!fd) {
+//        pthread_mutex_unlock(&media_mutex);
         return false;
     }
     muxer = AMediaMuxer_new(fd, AMEDIAMUXER_OUTPUT_FORMAT_MPEG_4);
     AMediaMuxer_setOrientationHint(muxer, 180);
+    nanoTime = system_nano_time();
+    media_status_t videoStatus = AMediaCodec_start(videoCodec);
+    if (AMEDIA_OK != videoStatus) {
+//        pthread_mutex_unlock(&media_mutex);
+        return false;
+    }
+    AvcEncoder::status = RECORD;
+
+    pthread_create(&videoThread, nullptr, videoStep, this);
+//    pthread_mutex_unlock(&media_mutex);
     return true;
 }
 
 void AvcEncoder::feedData(void *data) {
-    if (startFlag) {
+    if (AvcEncoder::status >= RECORD) {
         frame_queue.push(data);
     }
 }
 
-bool AvcEncoder::start() {
-    nanoTime = system_nano_time();
-
-    pthread_mutex_lock(&media_mutex);
-
-    media_status_t videoStatus = AMediaCodec_start(videoCodec);
-    if (AMEDIA_OK != videoStatus) {
-        return false;
-    }
-
-    mIsRecording = true;
-    startFlag = true;
-
-    if (videoThread) {
-        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "videoThread ZZZZZZZZZZZZZZZZZZZZZ");
-        pthread_join(videoThread, nullptr);
-        videoThread = NULL;
-    }
-    pthread_create(&videoThread, nullptr, videoStep, this);
-    pthread_mutex_unlock(&media_mutex);
-    return true;
-}
-
-bool AvcEncoder::isRecording() const {
-    return mIsRecording;
-}
-
-void AvcEncoder::releaseMediaCodec() {
-    pthread_mutex_lock(&media_mutex);
-    if (AvcEncoder::muxer != nullptr) {
-        AMediaMuxer_stop(AvcEncoder::muxer);
-        AMediaMuxer_delete(AvcEncoder::muxer);
-        AvcEncoder::muxer = nullptr;
-    }
-    pthread_mutex_unlock(&media_mutex);
-    pthread_mutex_destroy(&media_mutex);
-    if (AvcEncoder::videoCodec != nullptr) {
-        AMediaCodec_stop(AvcEncoder::videoCodec);
-        AMediaCodec_delete(AvcEncoder::videoCodec);
-        AvcEncoder::videoCodec = nullptr;
-    }
-    if (pthread_join(videoThread, nullptr) != EXIT_SUCCESS) {
-        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "pthread_join failed");
-    }
-    delete (AvcEncoder::yuv420_buf);
-    AvcEncoder::yuv420_buf = nullptr;
-}
-
 void AvcEncoder::stop() {
-    mIsRecording = false;
-    startFlag = false;
-    mVideoTrack = -1;
-    AvcEncoder::getInstance().releaseMediaCodec();
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "设定停止状态");
+    AvcEncoder::status = STOP;
 }
 
 
 int AvcEncoder::yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsigned int width,
                               unsigned int height) {
-    if (!in || !out) {
-        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "NULL-NULL-AAAAAAAAAAAAAAAAAAA");
+    if (in == nullptr || out == nullptr) {
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "数据空指针");
         return -1;
     }
     unsigned char *y = out;
@@ -119,7 +122,7 @@ int AvcEncoder::yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsig
     unsigned char *v = out + width * height + width * height / 4;
     unsigned int i, j;
     unsigned int base_h;
-    unsigned int is_y = 1, is_u = 1;
+    unsigned int is_u = 1;
     unsigned int y_index = 0, u_index = 0, v_index = 0;
     unsigned long yuv422_length = 2 * width * height;
     //序列为YU YV YU YV，一个yuv422帧的长度 width * height * 2 个字节
@@ -145,60 +148,101 @@ int AvcEncoder::yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsig
     return 1;
 }
 
-void *AvcEncoder::videoStep(void *obj) {
-    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "videoStep start");
 
-    auto *record = (AvcEncoder *) obj;
-    while (record->startFlag) {
-        if (record->frame_queue.empty()) continue;
-        ssize_t index = AMediaCodec_dequeueInputBuffer(AvcEncoder::getInstance().videoCodec, 100000);
+void *AvcEncoder::videoStep(void *obj) {
+    auto *avc = (AvcEncoder *) obj;
+    if (AvcEncoder::status != RECORD) return nullptr;
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "videoStep start");
+//    pthread_mutex_lock(&AvcEncoder::getInstance().media_mutex);
+    while (AvcEncoder::status >= RECORD) {
+        if (avc->videoCodec == nullptr) {
+            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "videoCodec not ready");
+            sleep_ms(50);
+        }
+        if (avc->frame_queue.empty()) {
+            sleep_ms(50);
+            continue;
+        }
+        void *data = *avc->frame_queue.wait_and_pop();
+        if (data == nullptr) {
+            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "bye");
+
+            continue;
+        }
+        int ret = avc->yuyvToYuv420P((const unsigned char *) data,
+                                     avc->yuv420_buf, 640,
+                                     480);
+        if (ret < 0) {
+            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "EEEEEEEEEEEEEEEEEEEE");
+            sleep_ms(50);
+            continue;
+        }
+
+        ssize_t index = AMediaCodec_dequeueInputBuffer(avc->videoCodec,10000);
         size_t out_size;
         if (index >= 0) {
-            uint8_t *buffer = AMediaCodec_getInputBuffer(AvcEncoder::getInstance().videoCodec, index, &out_size);
-            void *data = *record->frame_queue.wait_and_pop();
-            AvcEncoder::getInstance().yuyvToYuv420P((const unsigned char *) data,
-                                                    AvcEncoder::getInstance().yuv420_buf, 640, 480);
+            uint8_t *buffer = AMediaCodec_getInputBuffer(avc->videoCodec,
+                                                         index, &out_size);
+            if (avc->yuv420_buf != nullptr && out_size > 0) {
+                memcpy(buffer, avc->yuv420_buf, out_size);
 
-            if (AvcEncoder::getInstance().yuv420_buf != nullptr && out_size > 0) {
-                memcpy(buffer, AvcEncoder::getInstance().yuv420_buf, out_size);
-                AMediaCodec_queueInputBuffer(AvcEncoder::getInstance().videoCodec, index, 0, out_size,
-                                             (system_nano_time() - record->nanoTime) / 1000,
-                                             record->mIsRecording ? 0
-                                                                  : AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM);
+                AMediaCodec_queueInputBuffer(avc->videoCodec, index, 0,
+                                             out_size,
+                                             (system_nano_time() -
+                                              avc->nanoTime) / 1000,
+                                             AvcEncoder::status != STOP ? 0
+                                                                        : AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM);
             }
         }
         auto *info = (AMediaCodecBufferInfo *) malloc(
                 sizeof(AMediaCodecBufferInfo));
         ssize_t outIndex;
         do {
-            outIndex = AMediaCodec_dequeueOutputBuffer(AvcEncoder::getInstance().videoCodec, info, 0);
+            outIndex = AMediaCodec_dequeueOutputBuffer(avc->videoCodec, info,
+                                                       0);
             size_t outSize;
             if (outIndex >= 0) {
-                uint8_t *outputBuffer = AMediaCodec_getOutputBuffer(AvcEncoder::getInstance().videoCodec, outIndex,
-                                                                    &outSize);
-                if (record->mVideoTrack >= 0 && info->size > 0 &&
+                uint8_t *outputBuffer = AMediaCodec_getOutputBuffer(
+                        avc->videoCodec, outIndex,
+                        &outSize);
+                if (AvcEncoder::status >= RECORD && info->size > 0 &&
                     info->presentationTimeUs > 0) {
-                    AMediaMuxer_writeSampleData(AvcEncoder::getInstance().muxer, record->mVideoTrack,
+                    AMediaMuxer_writeSampleData(avc->muxer,
+                                                0,
                                                 outputBuffer,
                                                 info);
                 }
-                AMediaCodec_releaseOutputBuffer(AvcEncoder::getInstance().videoCodec, outIndex, false);
-                if (record->mIsRecording) {
-                    continue;
-                }
+                AMediaCodec_releaseOutputBuffer(avc->videoCodec, outIndex,
+                                                false);
             } else if (outIndex == AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED) {
-                AMediaFormat *outFormat = AMediaCodec_getOutputFormat(AvcEncoder::getInstance().videoCodec);
-                AMediaMuxer_addTrack(AvcEncoder::getInstance().muxer, outFormat);
+                AMediaFormat *outFormat = AMediaCodec_getOutputFormat(
+                        avc->videoCodec);
+                AMediaMuxer_addTrack(avc->muxer, outFormat);
                 const char *s = AMediaFormat_toString(outFormat);
-                __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "%s%s","视频格式：",s);
-                record->mVideoTrack = 0;
-                if (record->mVideoTrack >= 0) {
-                    AMediaMuxer_start(AvcEncoder::getInstance().muxer);
+                __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "%s%s", "视频格式：", s);
+                if (AvcEncoder::status >= RECORD) {
+                    AMediaMuxer_start(avc->muxer);
+                    AvcEncoder::status = MUXER_START;
                 }
             }
         } while (outIndex >= 0);
     }
-    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "videoStep end");
 
+    if (avc->muxer != nullptr) {
+        if (AvcEncoder::status == MUXER_START) {
+            AMediaMuxer_stop(avc->muxer);
+            AMediaMuxer_delete(avc->muxer);
+        }
+        avc->muxer = nullptr;
+    }
+    if (avc->videoCodec != nullptr) {
+        AMediaCodec_stop(avc->videoCodec);
+        AMediaCodec_delete(avc->videoCodec);
+        avc->videoCodec = nullptr;
+    }
+
+    AvcEncoder::status = READY;
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "编码线程结束");
     return nullptr;
 }
+

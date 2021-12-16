@@ -90,7 +90,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(LayoutInflater.from(this))
         setContentView(binding.root)
-        CrashReport.initCrashReport(applicationContext, "0a142437fe", BuildConfig.DEBUG);
+        CrashReport.initCrashReport(applicationContext, "0a142437fe", true)
 
 
         usbMonitor.setOnDeviceConnectListener(onDeviceConnectListener)
@@ -99,12 +99,17 @@ class MainActivity : AppCompatActivity() {
         IOSSBinderImpl2.getInstance().initOOS(uuid, this.applicationContext)
 
         binding.btnUpload.setOnClickListener {
-            recordFileName?.let { name->
+            recordFileName?.let { name ->
                 Thread {
                     getExternalFilesDir(Environment.DIRECTORY_MOVIES)?.let { mov ->
                         val f = File(mov, name)
                         IOSSBinderImpl2.getInstance().upload(OSSFileInfo().apply {
-                            val dir = "vision/$uuid/${SimpleDateFormat("yyyyMMdd",Locale.CHINA).format(System.currentTimeMillis())}"
+                            val dir = "vision/$uuid/${
+                                SimpleDateFormat(
+                                    "yyyyMMdd",
+                                    Locale.CHINA
+                                ).format(System.currentTimeMillis())
+                            }"
                             this.ossPath = String.format("%s/%s", dir, f.name)
                             this.localPath = f
                         }) { url ->
@@ -146,7 +151,11 @@ class MainActivity : AppCompatActivity() {
                                         val json = body.string()
                                         Log.e("et_log", "纯净度上传完成：$json")
                                         runOnUiThread {
-                                            Toast.makeText(applicationContext, "上传完成", Toast.LENGTH_LONG).show()
+                                            Toast.makeText(
+                                                applicationContext,
+                                                "上传完成",
+                                                Toast.LENGTH_LONG
+                                            ).show()
                                         }
                                     }
                                 }
@@ -174,14 +183,29 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnStopRecord.setOnClickListener {
             if (recording) {
-                if (abs(SystemClock.elapsedRealtime() - optTime) < 3_000) {
-                    Toast.makeText(applicationContext, "录制时间少于3s", Toast.LENGTH_SHORT).show()
+                if (abs(SystemClock.elapsedRealtime() - optTime) < 1_000) {
+                    Toast.makeText(applicationContext, "录制时间少于2s", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
-                camera.stopRecordingAvc()
                 recording = false
+                camera.stopRecordingAvc()
             }
         }
+
+//        Thread {
+//            SystemClock.sleep(10_000)
+//            while (true) {
+//                getExternalFilesDir(Environment.DIRECTORY_MOVIES).apply {
+//                    recordFileName = "video-${System.currentTimeMillis()}.mp4"
+//                    val f = File(this, recordFileName!!)
+//                    camera.startRecordingAvc(f.absolutePath)
+//                }
+//                SystemClock.sleep(2_000)
+//                camera.stopRecordingAvc()
+//                SystemClock.sleep(200)
+//
+//            }
+//        }.start()
     }
 
     override fun onResume() {

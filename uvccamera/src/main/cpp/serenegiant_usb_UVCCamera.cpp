@@ -175,9 +175,12 @@ static jint nativeRelease(JNIEnv *env, jobject thiz,
 static jint nativeStartRecordingAvc(JNIEnv *env, jobject thiz,
                                     ID_TYPE id_camera, jstring path_name) {
     ENTER();
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "nativeStartRecordingAvc");
+
     int result = JNI_ERR;
     auto *camera = reinterpret_cast<UVCCamera *>(id_camera);
     if (LIKELY(camera)) {
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "startRecordingAvc");
         if (path_name) {
             const char *pathName = env->GetStringUTFChars(path_name, JNI_FALSE);
             __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "%s", pathName);
@@ -186,6 +189,8 @@ static jint nativeStartRecordingAvc(JNIEnv *env, jobject thiz,
         } else{
             __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "DDDDDDDDDDDDD");
         }
+    } else {
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "unlike camera");
     }
     RETURN(result, jint);
 }
@@ -198,7 +203,7 @@ static jint nativeStopRecordingAvc(JNIEnv *env, jobject thiz, ID_TYPE id_camera)
     auto *camera = reinterpret_cast<UVCCamera *>(id_camera);
 
 	if (LIKELY(camera)) {
-		result = camera->stopRecordingAvc();
+		result = UVCCamera::stopRecordingAvc();
     } else {
         __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "bad unlikely camera:");
     }

@@ -30,28 +30,24 @@ private:
 
     const char *VIDEO_MIME = "video/avc";
 
-    pthread_t videoThread;
-    pthread_mutex_t media_mutex;
+    pthread_t videoThread = NULL;
+//    pthread_mutex_t media_mutex{};
     AMediaMuxer *muxer;
-    AMediaCodec *videoCodec;
-    unsigned char *yuv420_buf;
+    AMediaCodec *videoCodec{};
+    unsigned char *yuv420_buf{};
 
     AvcQueue<void *> frame_queue;
     int mVideoTrack = -1;
-    int64_t fpsTime;
+    int64_t fpsTime{};
     uint sleepTime = 20 * 1000;
-    bool mIsRecording = false;
-    bool startFlag = false;
-    int64_t nanoTime;
+    static int status;
+    int64_t nanoTime{};
 
-    AvcEncoder() {
-    }
+    AvcEncoder();
+
+    ~AvcEncoder();
 
 public:
-
-    ~AvcEncoder() {
-
-    }
 
     AvcEncoder(const AvcEncoder &) = delete;
 
@@ -62,20 +58,14 @@ public:
         return instance;
     }
 
-    bool prepare(AvcArgs arguments);
+    bool prepare_start(AvcArgs arguments);
 
-    bool start();
-
-    bool isRecording() const;
-
-    void stop();
+    static void stop() ;
 
     void feedData(void *data);
 
     static int yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsigned int width,
                              unsigned int height);
-
-    void releaseMediaCodec();
 
     static void *videoStep(void *obj);
 
