@@ -291,6 +291,7 @@ int UVCCamera::startRecordingAvc(const char* path_name) {
         args.color_format = 19;
         args.height = 480;
         args.width = 640;
+        args.frame_rate = 30;
         args.path_name = path_name;
         AvcEncoder::getInstance().prepare(args);
         AvcEncoder::getInstance().start();

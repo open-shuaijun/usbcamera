@@ -4,6 +4,20 @@ plugins {
 }
 
 android {
+    signingConfigs {
+        debug {
+            storeFile file('D:\\android\\workspace\\EasyTouch.jks')
+            keyAlias 'etkey'
+            storePassword '86105970'
+            keyPassword '86105970'
+        }
+        release {
+            storePassword '86105970'
+            keyPassword '86105970'
+            keyAlias 'etkey'
+            storeFile file('D:\\android\\workspace\\EasyTouch.jks')
+        }
+    }
     compileSdk 30
 
     defaultConfig {
@@ -11,23 +25,27 @@ android {
         minSdk 21
         targetSdk 30
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
             abiFilters "armeabi-v7a"
         }
+        signingConfig signingConfigs.release
     }
 
     buildTypes {
-        denug {
+        debug {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
+
         }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
     compileOptions {
@@ -39,6 +57,12 @@ android {
     }
     buildFeatures{
         viewBinding true
+    }
+
+    android.applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "${versionName}.apk"
+        }
     }
 }
 

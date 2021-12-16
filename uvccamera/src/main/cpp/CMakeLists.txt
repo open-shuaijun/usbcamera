@@ -60,7 +60,7 @@ set_target_properties(
 
 find_library(log-lib log)
 find_library(android-lib android)
-find_library(media-lib mediandk)
+find_library(amedia-lib mediandk)
 
 # Specifies libraries CMake should link to your target library. You
 # can link multiple libraries, such as libraries you define in this
@@ -72,6 +72,6 @@ target_link_libraries( # Specifies the target library.
         usb100
         uvc
         ${android-lib}
-        ${media-lib}
+        ${amedia-lib}
         ${log-lib})
 

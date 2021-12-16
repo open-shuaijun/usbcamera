@@ -66,6 +66,7 @@ bool AvcEncoder::start() {
     startFlag = true;
 
     if (videoThread) {
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "videoThread ZZZZZZZZZZZZZZZZZZZZZ");
         pthread_join(videoThread, nullptr);
         videoThread = NULL;
     }
@@ -93,7 +94,7 @@ void AvcEncoder::releaseMediaCodec() {
         AvcEncoder::videoCodec = nullptr;
     }
     if (pthread_join(videoThread, nullptr) != EXIT_SUCCESS) {
-        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "视频编码器退出异常");
+        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "pthread_join failed");
     }
     delete (AvcEncoder::yuv420_buf);
     AvcEncoder::yuv420_buf = nullptr;
@@ -103,6 +104,7 @@ void AvcEncoder::stop() {
     mIsRecording = false;
     startFlag = false;
     mVideoTrack = -1;
+    AvcEncoder::getInstance().releaseMediaCodec();
 }
 
 
@@ -144,6 +146,8 @@ int AvcEncoder::yuyv_to_yuv420p(const unsigned char *in, unsigned char *out, uns
 }
 
 void *AvcEncoder::videoStep(void *obj) {
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "videoStep start");
+
     auto *record = (AvcEncoder *) obj;
     while (record->startFlag) {
         if (record->frame_queue.empty()) continue;
@@ -192,6 +196,7 @@ void *AvcEncoder::videoStep(void *obj) {
             }
         } while (outIndex >= 0);
     }
-    AvcEncoder::getInstance().releaseMediaCodec();
+    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "videoStep end");
+
     return nullptr;
 }

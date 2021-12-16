@@ -3,8 +3,10 @@ package com.et.usbcamera
 import android.hardware.usb.UsbDevice
 import android.os.Bundle
 import android.os.Environment
+import android.os.SystemClock
 import android.util.Log
 import android.view.LayoutInflater
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.android.uvccamera.USBMonitor
 import com.android.uvccamera.UVCCamera
@@ -21,6 +23,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
 
@@ -28,6 +31,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val camera: UVCCamera by lazy { UVCCamera() }
     private var selectCamera = false
+    private var optTime = 0L
+    private var recording = false
+    private var recordFileName: String? = null
+    private var uuid = "10000000"
 
     private val onDeviceConnectListener: USBMonitor.OnDeviceConnectListener =
         object : USBMonitor.OnDeviceConnectListener {
@@ -83,81 +90,97 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(LayoutInflater.from(this))
         setContentView(binding.root)
-        CrashReport.initCrashReport(applicationContext, "0a142437fe", true);
+        CrashReport.initCrashReport(applicationContext, "0a142437fe", BuildConfig.DEBUG);
 
 
         usbMonitor.setOnDeviceConnectListener(onDeviceConnectListener)
         usbMonitor.register()
 
-        IOSSBinderImpl2.getInstance().initOOS("10000000", this.applicationContext)
+        IOSSBinderImpl2.getInstance().initOOS(uuid, this.applicationContext)
 
         binding.btnUpload.setOnClickListener {
-
-            Thread {
-                getExternalFilesDir(Environment.DIRECTORY_MOVIES)?.let { mov ->
-                    val f = File(mov, "test-1639547377288.mp4")
-                    IOSSBinderImpl2.getInstance().upload(OSSFileInfo().apply {
-                        val dir = String.format("vision/10000000/20211215")
-                        this.ossPath = String.format("%s/%s", dir, f.name)
-                        this.localPath = f
-                    }) { url ->
-                        try {
-                            val map: MutableMap<String?, Any?> = HashMap()
-                            map["avm"] = "10000000"
-                            map["myappid"] =
-                                "202004---1e38dsdfdfwes28093411d36375ffgujyudfh0euyiy73e544"
-                            map["key"] =
-                                "202004---++sfasaf+*gfh*ddsfwewe345F,,,&&yjfdg4567&&23Itrhyrty4545ht@@!!!$$..ss356h**33"
-                            val sdf = SimpleDateFormat("yyyyMMddHHmmss", Locale.CHINA)
-                            map["datetime"] = sdf.format(System.currentTimeMillis())
-                            map["url"] = url
-                            map["out_code"] = "0"
-                            map["sign"] = SignUtil.getSign(map, true)
-                            map.remove("key")
-                            val mClient = OkHttpClient.Builder()
-                                .connectTimeout(20, TimeUnit.SECONDS)
-                                .writeTimeout(20, TimeUnit.SECONDS)
-                                .readTimeout(20, TimeUnit.SECONDS)
-                                .build()
-                            val j = JSONObject(map)
-                            Log.e("et_log", "上传纯净度信息：$j")
-                            val builder = FormBody.Builder()
-                            for ((key, value) in map) {
-                                if (null != key && null != value) {
-                                    builder.add(key, value.toString().trim { it <= ' ' })
+            recordFileName?.let { name->
+                Thread {
+                    getExternalFilesDir(Environment.DIRECTORY_MOVIES)?.let { mov ->
+                        val f = File(mov, name)
+                        IOSSBinderImpl2.getInstance().upload(OSSFileInfo().apply {
+                            val dir = "vision/$uuid/${SimpleDateFormat("yyyyMMdd",Locale.CHINA).format(System.currentTimeMillis())}"
+                            this.ossPath = String.format("%s/%s", dir, f.name)
+                            this.localPath = f
+                        }) { url ->
+                            try {
+                                val map: MutableMap<String?, Any?> = HashMap()
+                                map["avm"] = uuid
+                                map["myappid"] =
+                                    "202004---1e38dsdfdfwes28093411d36375ffgujyudfh0euyiy73e544"
+                                map["key"] =
+                                    "202004---++sfasaf+*gfh*ddsfwewe345F,,,&&yjfdg4567&&23Itrhyrty4545ht@@!!!$$..ss356h**33"
+                                val sdf = SimpleDateFormat("yyyyMMddHHmmss", Locale.CHINA)
+                                map["datetime"] = sdf.format(System.currentTimeMillis())
+                                map["url"] = url
+                                map["out_code"] = "0"
+                                map["sign"] = SignUtil.getSign(map, true)
+                                map.remove("key")
+                                val mClient = OkHttpClient.Builder()
+                                    .connectTimeout(20, TimeUnit.SECONDS)
+                                    .writeTimeout(20, TimeUnit.SECONDS)
+                                    .readTimeout(20, TimeUnit.SECONDS)
+                                    .build()
+                                val j = JSONObject(map)
+                                Log.e("et_log", "上传纯净度信息：$j")
+                                val builder = FormBody.Builder()
+                                for ((key, value) in map) {
+                                    if (null != key && null != value) {
+                                        builder.add(key, value.toString().trim { it <= ' ' })
+                                    }
                                 }
-                            }
-                            val formBody = builder.build()
-                            val request: Request = Request.Builder()
-                                .url(URL_PURITY)
-                                .post(formBody)
-                                .build()
-                            val response = mClient.newCall(request).execute()
-                            if (response.isSuccessful) {
-                                val body = response.body()
-                                if (body != null) {
-                                    val json = body.string()
-                                    Log.e("et_log", "纯净度上传完成：$json")
+                                val formBody = builder.build()
+                                val request: Request = Request.Builder()
+                                    .url(URL_PURITY)
+                                    .post(formBody)
+                                    .build()
+                                val response = mClient.newCall(request).execute()
+                                if (response.isSuccessful) {
+                                    val body = response.body()
+                                    if (body != null) {
+                                        val json = body.string()
+                                        Log.e("et_log", "纯净度上传完成：$json")
+                                        runOnUiThread {
+                                            Toast.makeText(applicationContext, "上传完成", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
                                 }
+                            } catch (ignored: Exception) {
                             }
-                        } catch (ignored: Exception) {
+                            recordFileName = null
+                            null
                         }
-                        null
                     }
-                }
-            }.start()
-
+                }.start()
+            }
         }
 
         binding.btnStartRecord.setOnClickListener {
-            getExternalFilesDir(Environment.DIRECTORY_MOVIES).apply {
-                val f = File(this, "video-${System.currentTimeMillis()}.mp4")
-                camera.startRecordingAvc(f.absolutePath)
+            if (!recording) {
+                recording = true
+                optTime = SystemClock.elapsedRealtime()
+                getExternalFilesDir(Environment.DIRECTORY_MOVIES).apply {
+                    recordFileName = "video-${System.currentTimeMillis()}.mp4"
+                    val f = File(this, recordFileName!!)
+                    camera.startRecordingAvc(f.absolutePath)
+                }
             }
         }
 
         binding.btnStopRecord.setOnClickListener {
-            camera.stopRecordingAvc()
+            if (recording) {
+                if (abs(SystemClock.elapsedRealtime() - optTime) < 3_000) {
+                    Toast.makeText(applicationContext, "录制时间少于3s", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                camera.stopRecordingAvc()
+                recording = false
+            }
         }
     }
 
