@@ -72,8 +72,8 @@ public:
 
     void feedData(void *data);
 
-    static int yuyv_to_yuv420p(const unsigned char *in, unsigned char *out, unsigned int width,
-                               unsigned int height);
+    static int yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsigned int width,
+                             unsigned int height);
 
     void releaseMediaCodec();
 

@@ -108,8 +108,8 @@ void AvcEncoder::stop() {
 }
 
 
-int AvcEncoder::yuyv_to_yuv420p(const unsigned char *in, unsigned char *out, unsigned int width,
-                                unsigned int height) {
+int AvcEncoder::yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsigned int width,
+                              unsigned int height) {
     if (!in || !out) {
         __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "NULL-NULL-AAAAAAAAAAAAAAAAAAA");
         return -1;
@@ -151,12 +151,13 @@ void *AvcEncoder::videoStep(void *obj) {
     auto *record = (AvcEncoder *) obj;
     while (record->startFlag) {
         if (record->frame_queue.empty()) continue;
-        ssize_t index = AMediaCodec_dequeueInputBuffer(AvcEncoder::getInstance().videoCodec, -1);
+        ssize_t index = AMediaCodec_dequeueInputBuffer(AvcEncoder::getInstance().videoCodec, 100000);
         size_t out_size;
         if (index >= 0) {
             uint8_t *buffer = AMediaCodec_getInputBuffer(AvcEncoder::getInstance().videoCodec, index, &out_size);
             void *data = *record->frame_queue.wait_and_pop();
-            AvcEncoder::getInstance().yuyv_to_yuv420p((const unsigned char *) data, AvcEncoder::getInstance().yuv420_buf, 640, 480);
+            AvcEncoder::getInstance().yuyvToYuv420P((const unsigned char *) data,
+                                                    AvcEncoder::getInstance().yuv420_buf, 640, 480);
 
             if (AvcEncoder::getInstance().yuv420_buf != nullptr && out_size > 0) {
                 memcpy(buffer, AvcEncoder::getInstance().yuv420_buf, out_size);
@@ -187,8 +188,9 @@ void *AvcEncoder::videoStep(void *obj) {
                 }
             } else if (outIndex == AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED) {
                 AMediaFormat *outFormat = AMediaCodec_getOutputFormat(AvcEncoder::getInstance().videoCodec);
-                ssize_t track = AMediaMuxer_addTrack(AvcEncoder::getInstance().muxer, outFormat);
+                AMediaMuxer_addTrack(AvcEncoder::getInstance().muxer, outFormat);
                 const char *s = AMediaFormat_toString(outFormat);
+                __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "%s%s","视频格式：",s);
                 record->mVideoTrack = 0;
                 if (record->mVideoTrack >= 0) {
                     AMediaMuxer_start(AvcEncoder::getInstance().muxer);
