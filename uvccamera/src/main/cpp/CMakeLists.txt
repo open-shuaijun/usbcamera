@@ -11,7 +11,8 @@ file(GLOB native-src
         UVCStatusCallback.cpp
         Parameters.cpp
         serenegiant_usb_UVCCamera.cpp
-        AvcEncoder.cpp)
+        AvcEncoder.cpp
+        )
 
 add_library(uvccamera SHARED ${native-src})
 

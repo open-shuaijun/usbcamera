@@ -32,7 +32,7 @@ private:
 
     pthread_t videoThread = NULL;
 //    pthread_mutex_t media_mutex{};
-    AMediaMuxer *muxer;
+    AMediaMuxer *muxer{};
     AMediaCodec *videoCodec{};
     unsigned char *yuv420_buf{};
 
@@ -40,7 +40,7 @@ private:
     int mVideoTrack = -1;
     int64_t fpsTime{};
     uint sleepTime = 20 * 1000;
-    static int status;
+    static bool recording;
     int64_t nanoTime{};
 
     AvcEncoder();

@@ -90,7 +90,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(LayoutInflater.from(this))
         setContentView(binding.root)
-        CrashReport.initCrashReport(applicationContext, "0a142437fe", true)
+//        CrashReport.initCrashReport(applicationContext, "0a142437fe", true)
 
 
         usbMonitor.setOnDeviceConnectListener(onDeviceConnectListener)
@@ -183,7 +183,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnStopRecord.setOnClickListener {
             if (recording) {
-                if (abs(SystemClock.elapsedRealtime() - optTime) < 1_000) {
+                if (abs(SystemClock.elapsedRealtime() - optTime) < 2000) {
                     Toast.makeText(applicationContext, "录制时间少于2s", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
@@ -220,5 +220,11 @@ class MainActivity : AppCompatActivity() {
         const val TAG = "MainActivity"
         const val URL_PURITY =
             "http://test.easytouch-manager.com:7008/Interface/cs/up_box_medias.do"
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        camera.stopPreview()
+        camera.destroy()
     }
 }
