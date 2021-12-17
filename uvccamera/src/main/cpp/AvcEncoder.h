@@ -28,6 +28,7 @@
 
 class AvcEncoder {
 private:
+//    const char *VIDEO_MIME = "video/avc";
     const char *VIDEO_MIME = "video/avc";
     pthread_t videoThread = NULL;
     AMediaMuxer *muxer{};
@@ -56,7 +57,7 @@ public:
 
     void feedData(void *data);
 
-    static int yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsigned int width,
+    static void yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsigned int width,
                              unsigned int height);
 
     static void *videoStep(void *obj);

@@ -16,7 +16,7 @@
 
 bool AvcEncoder::recording = false;
 
-int frame_rate = 25;
+int frame_rate = 20;
 
 AvcEncoder::AvcEncoder() {
     yuv420_buf = new unsigned char[3 * 640 * 480 / 2 * sizeof(unsigned char)];
@@ -46,8 +46,8 @@ bool AvcEncoder::prepare_start(AvcArgs arguments) {
     AMediaFormat_setString(videoFormat, AMEDIAFORMAT_KEY_MIME, VIDEO_MIME);
     AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_WIDTH, 640);
     AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_HEIGHT, 480);
-    AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_BIT_RATE, 1024);
-    AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_FRAME_RATE, frame_rate);
+    AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_BIT_RATE, 250000);
+    AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_FRAME_RATE, 15);
     AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_I_FRAME_INTERVAL, 1);
     AMediaFormat_setInt32(videoFormat, AMEDIAFORMAT_KEY_COLOR_FORMAT, 19);
     uint8_t sps[2] = {0x12, 0x12};
@@ -73,7 +73,7 @@ bool AvcEncoder::prepare_start(AvcArgs arguments) {
 
     muxer = AMediaMuxer_new(fd, AMEDIAMUXER_OUTPUT_FORMAT_MPEG_4);
 
-    AMediaMuxer_setOrientationHint(muxer, 180);
+    AMediaMuxer_setOrientationHint(muxer, 90);
     nanoTime = system_nano_time();
 
     media_status_t videoStatus = AMediaCodec_start(videoCodec);
@@ -97,91 +97,103 @@ void AvcEncoder::stop() {
     AvcEncoder::recording = false;
 }
 
-//
-//int AvcEncoder::yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsigned int width,
-//                              unsigned int height) {
-//
-//    /**
-//     * YUYV YUV422
-//     * YUYV YUYV YUYV YUYV YUYV YUYV YUYV YUYV
-//     * YUYV YUYV YUYV YUYV YUYV YUYV YUYV YUYV
-//     * YUYV YUYV YUYV YUYV YUYV YUYV YUYV YUYV
-//     * YUYV YUYV YUYV YUYV YUYV YUYV YUYV YUYV
-//     *
-//     * YUV420P
-//     * YYYY YYYY YYYY YYYY
-//     * YYYY YYYY YYYY YYYY
-//     * YYYY YYYY YYYY YYYY
-//     * YYYY YYYY YYYY YYYY
-//     * uuuu uuuu vvvv vvvv
-//     * uuuu uuuu vvvv vvvv
-//     * */
-//
-//    int32_t frame_size = width * height;
-//    unsigned char *y = out; // width * height * 1.5
+
+/**
+ * YUYV YUV422
+ * YUYV YUYV YUYV YUYV YUYV YUYV YUYV YUYV
+ * YUYV YUYV YUYV YUYV YUYV YUYV YUYV YUYV
+ * YUYV YUYV YUYV YUYV YUYV YUYV YUYV YUYV
+ * YUYV YUYV YUYV YUYV YUYV YUYV YUYV YUYV
+ *
+ * YUV420P
+ * YY   YY   YY   YY   YY   YY   YY   YY
+ * YY   YY   YY   YY   YY   YY   YY   YY
+ * YY   YY   YY   YY   YY   YY   YY   YY
+ * YY   YY   YY   YY   YY   YY   YY   YY
+ * u    u    u    u    u    u    u    u
+ * u    u    u    u    u    u    u    u
+ * v    v    v    v    v    v    v    v
+ * v    v    v    v    v    v    v    v
+ * */
+void AvcEncoder::yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsigned int width,
+                               unsigned int height) {
+    unsigned long frame_size = width * height;
+    unsigned char *y = out;
+    unsigned char *u = out + frame_size;
+    unsigned char *v = out + frame_size + frame_size / 4;
+
+    for (unsigned int i = 0, g = 0; i < 2 * frame_size; i += 2, g++) {
+        *(y + g) = *(in + i);
+    }
+    bool yuv_u = true;
+    unsigned int yuv_u_index = 0;
+    unsigned int yuv_v_index = 0;
+    unsigned int base_h;
+    for (unsigned int i = 0; i < height; i += 2) {
+        base_h = i * width * 2;
+        for (unsigned int j = base_h + 1; j < base_h + width * 2; j += 2) {
+            if (yuv_u) {
+                *(u + yuv_u_index) = *(in + j);
+                yuv_u_index++;
+            } else {
+                *(v + yuv_v_index) = *(in + j);
+                yuv_v_index++;
+            }
+            yuv_u = !yuv_u;
+        }
+    }
+
+
+
+    /**
+     * 8 x 4
+     * 1  2  3  4  5  6  7  8
+     * Y  Y  Y  Y  Y  Y  Y  Y
+     * Y  Y  Y  Y  Y  Y  Y  Y
+     * Y  Y  Y  Y  Y  Y  Y  Y
+     * Y  Y  Y  Y  Y  Y  Y  Y
+     * U     U     U     U
+     * U     U     U     U
+     * V     V     V     V
+     * V     V     V     V
+     *
+     *
+     * */
+
+
+}
+
+//void AvcEncoder::yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsigned int width,
+//                               unsigned int height) {
+//    unsigned long frame_size = width * height;
+//    unsigned char *y = out;
 //    unsigned char *u = out + frame_size;
-//    unsigned char *v = out + frame_size  + frame_size / 4;
-//    unsigned int base_h;
-//    unsigned int is_u = 1;
-//    unsigned int u_index = 0, v_index = 0;
-//    unsigned long yuv422_length = 2 * frame_size;
-//    for (unsigned int i = 0, j = 0; i < yuv422_length; i += 2, j++) {
-//        *(y + j) = *(in + i);
-//        j++;
+//    unsigned char *v = out + frame_size + frame_size / 4;
+//
+//    unsigned int y_index = 0;
+//    unsigned long yuv422_length = 2 * width * height;
+//    for (unsigned int i = 0; i < yuv422_length; i += 2) {
+//        *(y + y_index) = *(in + i);
+//        y_index++;
 //    }
+//    bool yuv_u = true;
+//    unsigned int yuv_u_index = 0;
+//    unsigned int yuv_v_index = 0;
+//    unsigned int base_h;
 //    for (unsigned int i = 0; i < height; i += 2) {
 //        base_h = i * width * 2;
 //        for (unsigned int j = base_h + 1; j < base_h + width * 2; j += 2) {
-//            if (is_u) {
-//                *(u + u_index) = *(in + j);
-//                u_index++;
-//                is_u = 0;
+//            if (yuv_u) {
+//                *(u + yuv_u_index) = *(in + j);
+//                yuv_u_index++;
 //            } else {
-//                *(v + v_index) = *(in + j);
-//                v_index++;
-//                is_u = 1;
+//                *(v + yuv_v_index) = *(in + j);
+//                yuv_v_index++;
 //            }
+//            yuv_u = !yuv_u;
 //        }
 //    }
-//    return 1;
 //}
-
-
-
-
-int AvcEncoder::yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsigned int width,
-                              unsigned int height) {
-    unsigned char *y = out;
-    unsigned char *u = out + width * height;
-    unsigned char *v = out + width * height + width * height / 4;
-    unsigned int i, j;
-    unsigned int base_h;
-    unsigned int is_u = 1;
-    unsigned int y_index = 0, u_index = 0, v_index = 0;
-    unsigned long yuv422_length = 2 * width * height;
-    //序列为YU YV YU YV，一个yuv422帧的长度 width * height * 2 个字节
-    //丢弃偶数行 u v
-    for (i = 0; i < yuv422_length; i += 2) {
-        *(y + y_index) = *(in + i);
-        y_index++;
-    }
-    for (i = 0; i < height; i += 2) {
-        base_h = i * width * 2;
-        for (j = base_h + 1; j < base_h + width * 2; j += 2) {
-            if (is_u) {
-                *(u + u_index) = *(in + j);
-                u_index++;
-                is_u = 0;
-            } else {
-                *(v + v_index) = *(in + j);
-                v_index++;
-                is_u = 1;
-            }
-        }
-    }
-    return 1;
-}
-
 
 
 void *AvcEncoder::videoStep(void *obj) {
@@ -192,25 +204,25 @@ void *AvcEncoder::videoStep(void *obj) {
         if (!avc->frame_queue.empty()) {
             void *data = *avc->frame_queue.wait_and_pop();
             if (data) {
-                int ret = avc->yuyvToYuv420P((const unsigned char *) data, avc->yuv420_buf, 640,
-                                             480);
-                if (ret > 0) {
-                    ssize_t inputIndex = AMediaCodec_dequeueInputBuffer(avc->videoCodec, 10000);
-                    size_t out_size;
-                    if (inputIndex >= 0) {
-                        uint8_t *buffer = AMediaCodec_getInputBuffer(avc->videoCodec,
-                                                                     inputIndex, &out_size);
+                avc->yuyvToYuv420P((const unsigned char *) data, avc->yuv420_buf, 640,
+                                   480);
 
-                        if (out_size > 0) {
-                            memcpy(buffer, avc->yuv420_buf, out_size);
-                            AMediaCodec_queueInputBuffer(avc->videoCodec, inputIndex, 0,
-                                                         out_size,
-                                                         (system_nano_time() - avc->nanoTime) /
-                                                         1000,
-                                                         AvcEncoder::recording ? 0 : AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM);
-                        }
+                ssize_t inputIndex = AMediaCodec_dequeueInputBuffer(avc->videoCodec, 10000);
+                size_t out_size;
+                if (inputIndex >= 0) {
+                    uint8_t *buffer = AMediaCodec_getInputBuffer(avc->videoCodec,
+                                                                 inputIndex, &out_size);
+
+                    if (out_size > 0) {
+                        memcpy(buffer, avc->yuv420_buf, out_size);
+                        AMediaCodec_queueInputBuffer(avc->videoCodec, inputIndex, 0,
+                                                     out_size,
+                                                     (system_nano_time() - avc->nanoTime) / 1000,
+                                                     AvcEncoder::recording ? 0
+                                                                           : AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM);
                     }
                 }
+
             }
         }
 
