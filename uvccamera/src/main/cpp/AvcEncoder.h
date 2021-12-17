@@ -1,3 +1,4 @@
+#include "libuvc.h"
 //
 // Created by sjh on 2021/12/11.
 //
@@ -27,24 +28,15 @@
 
 class AvcEncoder {
 private:
-
     const char *VIDEO_MIME = "video/avc";
-
     pthread_t videoThread = NULL;
-//    pthread_mutex_t media_mutex{};
     AMediaMuxer *muxer{};
     AMediaCodec *videoCodec{};
     unsigned char *yuv420_buf{};
-
     AvcQueue<void *> frame_queue;
-    int mVideoTrack = -1;
-    int64_t fpsTime{};
-    uint sleepTime = 20 * 1000;
     static bool recording;
     int64_t nanoTime{};
-
     AvcEncoder();
-
     ~AvcEncoder();
 
 public:

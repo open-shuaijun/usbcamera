@@ -19,7 +19,6 @@ bool AvcEncoder::recording = false;
 int frame_rate = 25;
 
 AvcEncoder::AvcEncoder() {
-    fpsTime = 1000 / frame_rate;
     yuv420_buf = new unsigned char[3 * 640 * 480 / 2 * sizeof(unsigned char)];
 }
 
@@ -98,12 +97,55 @@ void AvcEncoder::stop() {
     AvcEncoder::recording = false;
 }
 
-static inline void
-rotateYUV420P90(unsigned char *srcY, unsigned char *srcU, unsigned char *srcV,
-                unsigned char *dstY, unsigned char *dstU, unsigned char *dstV,
-                int width, int height) {
+//
+//int AvcEncoder::yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsigned int width,
+//                              unsigned int height) {
+//
+//    /**
+//     * YUYV YUV422
+//     * YUYV YUYV YUYV YUYV YUYV YUYV YUYV YUYV
+//     * YUYV YUYV YUYV YUYV YUYV YUYV YUYV YUYV
+//     * YUYV YUYV YUYV YUYV YUYV YUYV YUYV YUYV
+//     * YUYV YUYV YUYV YUYV YUYV YUYV YUYV YUYV
+//     *
+//     * YUV420P
+//     * YYYY YYYY YYYY YYYY
+//     * YYYY YYYY YYYY YYYY
+//     * YYYY YYYY YYYY YYYY
+//     * YYYY YYYY YYYY YYYY
+//     * uuuu uuuu vvvv vvvv
+//     * uuuu uuuu vvvv vvvv
+//     * */
+//
+//    int32_t frame_size = width * height;
+//    unsigned char *y = out; // width * height * 1.5
+//    unsigned char *u = out + frame_size;
+//    unsigned char *v = out + frame_size  + frame_size / 4;
+//    unsigned int base_h;
+//    unsigned int is_u = 1;
+//    unsigned int u_index = 0, v_index = 0;
+//    unsigned long yuv422_length = 2 * frame_size;
+//    for (unsigned int i = 0, j = 0; i < yuv422_length; i += 2, j++) {
+//        *(y + j) = *(in + i);
+//        j++;
+//    }
+//    for (unsigned int i = 0; i < height; i += 2) {
+//        base_h = i * width * 2;
+//        for (unsigned int j = base_h + 1; j < base_h + width * 2; j += 2) {
+//            if (is_u) {
+//                *(u + u_index) = *(in + j);
+//                u_index++;
+//                is_u = 0;
+//            } else {
+//                *(v + v_index) = *(in + j);
+//                v_index++;
+//                is_u = 1;
+//            }
+//        }
+//    }
+//    return 1;
+//}
 
-}
 
 
 
@@ -139,6 +181,7 @@ int AvcEncoder::yuyvToYuv420P(const unsigned char *in, unsigned char *out, unsig
     }
     return 1;
 }
+
 
 
 void *AvcEncoder::videoStep(void *obj) {
