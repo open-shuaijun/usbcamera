@@ -280,32 +280,31 @@ int UVCCamera::setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pix
     }
     RETURN(result, int);
 }
+//
+//int UVCCamera::startRecordingAvc(const char* path_name) {
+//    ENTER();
+//    int result = EXIT_FAILURE;
+//    if (mPreview) {
+//        LOGV("录制文件路径:" + path_name)
+//        AvcArgs args{};
+//        args.bit_rate = 1024;
+//        args.color_format = 19;
+//        args.height = 480;
+//        args.width = 640;
+//        args.frame_rate = 30;
+//        args.path_name = path_name;
+//    } else {
+//        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "Native预览未就绪");
+//    }
+//    RETURN(result, int);
+//}
 
-int UVCCamera::startRecordingAvc(const char* path_name) {
-    ENTER();
-    int result = EXIT_FAILURE;
-    if (mPreview) {
-        LOGV("录制文件路径:" + path_name)
-        AvcArgs args{};
-        args.bit_rate = 1024;
-        args.color_format = 19;
-        args.height = 480;
-        args.width = 640;
-        args.frame_rate = 30;
-        args.path_name = path_name;
-        AvcEncoder::getInstance().prepare_start(args);
-    } else {
-        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "Native预览未就绪");
-    }
-    RETURN(result, int);
-}
-
-int UVCCamera::stopRecordingAvc() {
-    ENTER();
-    int result = EXIT_FAILURE;
-    AvcEncoder::getInstance().stop();
-    RETURN(result, int);
-}
+//int UVCCamera::stopRecordingAvc() {
+//    ENTER();
+//    int result = EXIT_FAILURE;
+//    AvcEncoder::getInstance().stop();
+//    RETURN(result, int);
+//}
 
 int UVCCamera::startPreview() {
     ENTER();

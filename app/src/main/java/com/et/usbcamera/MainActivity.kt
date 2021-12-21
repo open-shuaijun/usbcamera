@@ -14,7 +14,6 @@ import com.et.usbcamera.databinding.ActivityMainBinding
 import com.et.usbcamera.oss.OSSFileInfo
 import com.et.usbcamera.oss.service.IOSSBinderImpl2
 import com.et.usbcamera.oss.util.SignUtil
-import com.tencent.bugly.crashreport.CrashReport
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -22,12 +21,26 @@ import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
 
 
+    companion object {
+        var width = 640
+        var height = 480
+        var framerate = 24
+        var biterate = 8500 * 1000
+        private val yuvqueuesize = 10
+        var YUVQueue = ArrayBlockingQueue<ByteArray>(yuvqueuesize)
+        const val TAG = "MainActivity"
+        const val URL_PURITY =
+            "http://test.easytouch-manager.com:7008/Interface/cs/up_box_medias.do"
+    }
+
+    private var avcCodec: AvcEncoder? = null
     private lateinit var binding: ActivityMainBinding
     private val camera: UVCCamera by lazy { UVCCamera() }
     private var selectCamera = false
@@ -71,7 +84,17 @@ class MainActivity : AppCompatActivity() {
                 camera.open(ctrlBlock)
                 camera.setPreviewDisplay(binding.surface.holder)
                 camera.setPreviewSize(640, 480, UVCCamera.FRAME_FORMAT_YUYV)
+                camera.setFrameCallback({ frame ->
+                    run {
+                        frame?.let {
+                            val bytes = ByteArray(frame.capacity())
+                            frame.get(bytes)
+                            YUVQueue.offer(bytes)
+                        }
+                    }
+                }, UVCCamera.PIXEL_FORMAT_YUV)
                 camera.startPreview()
+
             }
 
             override fun onDisconnect(device: UsbDevice?, ctrlBlock: USBMonitor.UsbControlBlock?) {
@@ -169,15 +192,19 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+
         binding.btnStartRecord.setOnClickListener {
             if (!recording) {
                 recording = true
-                optTime = SystemClock.elapsedRealtime()
-                getExternalFilesDir(Environment.DIRECTORY_MOVIES).apply {
-                    recordFileName = "video-${System.currentTimeMillis()}.mp4"
-                    val f = File(this, recordFileName!!)
-                    camera.startRecordingAvc(f.absolutePath)
-                }
+                Thread {
+                    optTime = SystemClock.elapsedRealtime()
+                    getExternalFilesDir(Environment.DIRECTORY_MOVIES).apply {
+                        recordFileName = "video-${System.currentTimeMillis()}.mp4"
+                        val f = File(this, recordFileName!!)
+                        avcCodec = AvcEncoder(width, height, framerate, biterate, f)
+                        avcCodec?.StartEncoderThread()
+                    }
+                }.start()
             }
         }
 
@@ -188,38 +215,10 @@ class MainActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
                 recording = false
-                camera.stopRecordingAvc()
+                avcCodec?.StopThread()
+
             }
         }
-
-//        Thread {
-//            SystemClock.sleep(10_000)
-//            while (true) {
-//                getExternalFilesDir(Environment.DIRECTORY_MOVIES).apply {
-//                    recordFileName = "video-${System.currentTimeMillis()}.mp4"
-//                    val f = File(this, recordFileName!!)
-//                    camera.startRecordingAvc(f.absolutePath)
-//                }
-//                SystemClock.sleep(2_000)
-//                camera.stopRecordingAvc()
-//                SystemClock.sleep(200)
-//
-//            }
-//        }.start()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        A().apply {
-            getMediaCodecList()
-        }
-    }
-
-
-    companion object {
-        const val TAG = "MainActivity"
-        const val URL_PURITY =
-            "http://test.easytouch-manager.com:7008/Interface/cs/up_box_medias.do"
     }
 
     override fun onDestroy() {

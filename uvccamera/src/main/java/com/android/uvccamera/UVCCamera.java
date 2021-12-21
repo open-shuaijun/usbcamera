@@ -229,24 +229,24 @@ public class UVCCamera {
      *
      * @param pathName path_name video
      */
-    public int startRecordingAvc(final String pathName) {
-        Log.d(TAG, "开始存储:" + pathName);
-        int r = 0;
-        if (mNativePtr != 0) {
-            r = nativeStartRecordingAvc(mNativePtr, pathName);
-        }
-        return r;
-    }
+//    public int startRecordingAvc(final String pathName) {
+//        Log.d(TAG, "开始存储:" + pathName);
+//        int r = 0;
+//        if (mNativePtr != 0) {
+//            r = nativeStartRecordingAvc(mNativePtr, pathName);
+//        }
+//        return r;
+//    }
 
     /**
      * 停止录制h264
      */
-    public void stopRecordingAvc() {
-        if (mNativePtr != 0) {
-            Log.d(TAG, "调用结束录制");
-            nativeStopRecordingAvc(mNativePtr);
-        }
-    }
+//    public void stopRecordingAvc() {
+//        if (mNativePtr != 0) {
+//            Log.d(TAG, "调用结束录制");
+//            nativeStopRecordingAvc(mNativePtr);
+//        }
+//    }
 
     /**
      * set button callback

@@ -172,43 +172,43 @@ static jint nativeRelease(JNIEnv *env, jobject thiz,
 }
 
 // 开始录制
-static jint nativeStartRecordingAvc(JNIEnv *env, jobject thiz,
-                                    ID_TYPE id_camera, jstring path_name) {
-    ENTER();
-    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "nativeStartRecordingAvc");
-
-    int result = JNI_ERR;
-    auto *camera = reinterpret_cast<UVCCamera *>(id_camera);
-    if (LIKELY(camera)) {
-        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "startRecordingAvc");
-        if (path_name) {
-            const char *pathName = env->GetStringUTFChars(path_name, JNI_FALSE);
-            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "%s", pathName);
-            camera->startRecordingAvc(pathName);
-            env->ReleaseStringUTFChars(path_name, pathName);
-        } else{
-            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "DDDDDDDDDDDDD");
-        }
-    } else {
-        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "unlike camera");
-    }
-    RETURN(result, jint);
-}
+//static jint nativeStartRecordingAvc(JNIEnv *env, jobject thiz,
+//                                    ID_TYPE id_camera, jstring path_name) {
+//    ENTER();
+//    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "nativeStartRecordingAvc");
+//
+//    int result = JNI_ERR;
+//    auto *camera = reinterpret_cast<UVCCamera *>(id_camera);
+//    if (LIKELY(camera)) {
+//        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "startRecordingAvc");
+//        if (path_name) {
+//            const char *pathName = env->GetStringUTFChars(path_name, JNI_FALSE);
+//            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "%s", pathName);
+//            camera->startRecordingAvc(pathName);
+//            env->ReleaseStringUTFChars(path_name, pathName);
+//        } else{
+//            __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "DDDDDDDDDDDDD");
+//        }
+//    } else {
+//        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "unlike camera");
+//    }
+//    RETURN(result, jint);
+//}
 
 
 // 停止录制
-static jint nativeStopRecordingAvc(JNIEnv *env, jobject thiz, ID_TYPE id_camera) {
-    ENTER();
-    int result = JNI_ERR;
-    auto *camera = reinterpret_cast<UVCCamera *>(id_camera);
-
-	if (LIKELY(camera)) {
-		result = UVCCamera::stopRecordingAvc();
-    } else {
-        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "bad unlikely camera:");
-    }
-    RETURN(result, jint);
-}
+//static jint nativeStopRecordingAvc(JNIEnv *env, jobject thiz, ID_TYPE id_camera) {
+//    ENTER();
+//    int result = JNI_ERR;
+//    auto *camera = reinterpret_cast<UVCCamera *>(id_camera);
+//
+//	if (LIKELY(camera)) {
+//		result = UVCCamera::stopRecordingAvc();
+//    } else {
+//        __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "bad unlikely camera:");
+//    }
+//    RETURN(result, jint);
+//}
 
 //======================================================================
 static jint nativeSetStatusCallback(JNIEnv *env, jobject thiz,
@@ -2061,8 +2061,8 @@ static JNINativeMethod methods[] = {
         {"nativeConnect",                           "(JIIIIILjava/lang/String;)I",                 (void *) nativeConnect},
         {"nativeRelease",                           "(J)I",                                        (void *) nativeRelease},
 
-        {"nativeStartRecordingAvc",                 "(JLjava/lang/String;)I",                       (void *) nativeStartRecordingAvc},
-        {"nativeStopRecordingAvc",                  "(J)I",                                         (void *) nativeStopRecordingAvc},
+//        {"nativeStartRecordingAvc",                 "(JLjava/lang/String;)I",                       (void *) nativeStartRecordingAvc},
+//        {"nativeStopRecordingAvc",                  "(J)I",                                         (void *) nativeStopRecordingAvc},
 
         {"nativeSetStatusCallback",                 "(JLcom/android/uvccamera/IStatusCallback;)I", (void *) nativeSetStatusCallback},
         {"nativeSetButtonCallback",                 "(JLcom/android/uvccamera/IButtonCallback;)I", (void *) nativeSetButtonCallback},
