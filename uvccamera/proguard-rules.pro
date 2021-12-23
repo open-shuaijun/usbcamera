@@ -19,6 +19,15 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
--keepclassmembernames class com.android.uvccamera.UVCCamera {
+-keep public class com.android.uvccamera.UVCCamera {
     native <methods>;
+    protected long mNativePtr;
+}
+
+-keep interface com.android.uvccamera.IFrameCallback {
+    <methods>;
+}
+
+-keep interface com.android.uvccamera.IStatusCallback {
+    <methods>;
 }

@@ -29,8 +29,8 @@
 #include <pthread.h>
 #include <android/native_window.h>
 #include "objectarray.h"
-#include "AvcArgs.h"
-#include "AvcEncoder.h"
+#include "AvcArgs.txt"
+#include "AvcEncoder.h.txt"
 
 #pragma interface
 

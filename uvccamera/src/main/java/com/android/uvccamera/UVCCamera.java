@@ -213,40 +213,12 @@ public class UVCCamera {
                 DEFAULT_PREVIEW_MIN_FPS, DEFAULT_PREVIEW_MAX_FPS, DEFAULT_PREVIEW_MODE, DEFAULT_BANDWIDTH);
     }
 
-    /**
-     * set status callback
-     *
-     * @param callback
-     */
     public void setStatusCallback(final IStatusCallback callback) {
         if (mNativePtr != 0) {
             nativeSetStatusCallback(mNativePtr, callback);
         }
     }
 
-    /**
-     * 启动录制h264
-     *
-     * @param pathName path_name video
-     */
-//    public int startRecordingAvc(final String pathName) {
-//        Log.d(TAG, "开始存储:" + pathName);
-//        int r = 0;
-//        if (mNativePtr != 0) {
-//            r = nativeStartRecordingAvc(mNativePtr, pathName);
-//        }
-//        return r;
-//    }
-
-    /**
-     * 停止录制h264
-     */
-//    public void stopRecordingAvc() {
-//        if (mNativePtr != 0) {
-//            Log.d(TAG, "调用结束录制");
-//            nativeStopRecordingAvc(mNativePtr);
-//        }
-//    }
 
     /**
      * set button callback

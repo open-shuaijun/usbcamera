@@ -73,6 +73,5 @@ target_link_libraries( # Specifies the target library.
         usb100
         uvc
         ${android-lib}
-#        ${amedia-lib}
         ${log-lib})
 

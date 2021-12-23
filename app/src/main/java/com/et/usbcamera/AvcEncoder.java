@@ -18,25 +18,24 @@ public class AvcEncoder {
     private final int TIMEOUT_USEC = 12000;
 
     private MediaCodec mediaCodec;
-    int m_width;
-    int m_height;
-    int m_framerate;
-    byte[] m_info = null;
-
-    public byte[] configbyte;
+    int width;
+    int height;
+    int frameRate;
     private MediaMuxer muxer;
+    private final byte[] yuv420p;
 
 
     public AvcEncoder(int width, int height, int framerate, int bitrate, File pathFile) {
 
-        m_width = width;
-        m_height = height;
-        m_framerate = framerate;
+        this.width = width;
+        this.height = height;
+        frameRate = framerate;
+        yuv420p = new byte[this.width * this.height * 3 / 2];
 
         MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", width, height);
         mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar);
-        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, width * height * 5);
-        mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, 30);
+        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, 800);
+        mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, 20);
         mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
         try {
             mediaCodec = MediaCodec.createEncoderByType("video/avc");
@@ -49,9 +48,6 @@ public class AvcEncoder {
         checkFile(pathFile);
     }
 
-//    private BufferedOutputStream outputStream;
-//    FileOutputStream outStream;
-
     private void checkFile(File file) {
         if (file.exists()) {
             boolean b = file.delete();
@@ -59,58 +55,35 @@ public class AvcEncoder {
         }
         try {
             muxer = new MediaMuxer(file.getAbsolutePath(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
-            muxer.setOrientationHint(90);
+            muxer.setOrientationHint(0);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void StopEncoder() {
-        try {
-            mediaCodec.stop();
-            mediaCodec.release();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    ByteBuffer[] inputBuffers;
-    ByteBuffer[] outputBuffers;
-
-    public boolean isRuning = false;
+    public boolean isRunning = false;
 
     public void StopThread() {
-        isRuning = false;
-        muxer.stop();
-        muxer.release();
-        StopEncoder();
-
-
+        isRunning = false;
     }
-
-    int count = 0;
 
     public void StartEncoderThread() {
         Thread EncoderThread = new Thread(() -> {
-            isRuning = true;
+            isRunning = true;
             byte[] input;
-            long generateIndex = 0;
             int track = 0;
 
-            while (isRuning) {
+            while (isRunning) {
                 if (MainActivity.Companion.getYUVQueue().size() > 0) {
                     int deqInput = mediaCodec.dequeueInputBuffer(-1);
                     input = MainActivity.Companion.getYUVQueue().poll();
-                    byte[] yuv420p = new byte[m_width * m_height * 3 / 2];
-                    yuyvToYuv420P(input, yuv420p, m_width, m_height);
-                    input = yuv420p;
+                    yuyvToYuv420P(input, yuv420p, width, height);
                     ByteBuffer inputBuffer = mediaCodec.getInputBuffer(deqInput);
-                    inputBuffer.put(input);
-                    generateIndex++;
-                    mediaCodec.queueInputBuffer(deqInput, 0, input.length, System.nanoTime() / 1000, 0);
+                    inputBuffer.put(yuv420p);
+                    mediaCodec.queueInputBuffer(deqInput, 0, yuv420p.length, System.nanoTime() / 1000, 0);
 
                     MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
-                    int deOutput = mediaCodec.dequeueOutputBuffer(bufferInfo, 10000);
+                    int deOutput = mediaCodec.dequeueOutputBuffer(bufferInfo, TIMEOUT_USEC);
                     if (deOutput >= 0) {
                         ByteBuffer outputBuffer = mediaCodec.getOutputBuffer(deOutput);
                         if (bufferInfo.flags == MediaCodec.BUFFER_FLAG_CODEC_CONFIG ) {
@@ -126,6 +99,10 @@ public class AvcEncoder {
                     SystemClock.sleep(30);
                 }
             }
+            muxer.stop();
+            muxer.release();
+            mediaCodec.stop();
+            mediaCodec.release();
         });
         EncoderThread.start();
     }
@@ -134,26 +111,8 @@ public class AvcEncoder {
      * Generates the presentation time for frame N, in microseconds.
      */
     private long computePresentationTime(long frameIndex) {
-        return 132 + frameIndex * 1000000 / m_framerate;
+        return 132 + frameIndex * 1000000 / frameRate;
     }
-
-//    private void NV21ToNV12(byte[] nv21, byte[] nv12, int width, int height) {
-//        if (nv21 == null || nv12 == null) {
-//            return;
-//        }
-//        int framesize = width * height;
-//        int i = 0, j = 0;
-//        System.arraycopy(nv21, 0, nv12, 0, framesize);
-//        for (i = 0; i < framesize; i++) {
-//            nv12[i] = nv21[i];
-//        }
-//        for (j = 0; j < framesize / 2; j += 2) {
-//            nv12[framesize + j - 1] = nv21[j + framesize];
-//        }
-//        for (j = 0; j < framesize / 2; j += 2) {
-//            nv12[framesize + j] = nv21[j + framesize - 1];
-//        }
-//    }
 
 
     void yuyvToYuv420P(byte[] yuyv, byte[] yuv420p, int width, int height) {
@@ -161,7 +120,6 @@ public class AvcEncoder {
         for (int i = 0, g = 0; i < frame_size * 2; i += 2, g++) {
             yuv420p[g] = yuyv[i];
         }
-
         int base_h;
         boolean isU = true;
         int indexU = frame_size;

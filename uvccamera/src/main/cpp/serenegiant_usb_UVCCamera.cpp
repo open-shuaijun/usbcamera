@@ -2060,10 +2060,6 @@ static JNINativeMethod methods[] = {
         //
         {"nativeConnect",                           "(JIIIIILjava/lang/String;)I",                 (void *) nativeConnect},
         {"nativeRelease",                           "(J)I",                                        (void *) nativeRelease},
-
-//        {"nativeStartRecordingAvc",                 "(JLjava/lang/String;)I",                       (void *) nativeStartRecordingAvc},
-//        {"nativeStopRecordingAvc",                  "(J)I",                                         (void *) nativeStopRecordingAvc},
-
         {"nativeSetStatusCallback",                 "(JLcom/android/uvccamera/IStatusCallback;)I", (void *) nativeSetStatusCallback},
         {"nativeSetButtonCallback",                 "(JLcom/android/uvccamera/IButtonCallback;)I", (void *) nativeSetButtonCallback},
 
